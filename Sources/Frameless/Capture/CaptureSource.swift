@@ -31,6 +31,26 @@ enum CaptureSource {
         return SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: [])
     }
 
+    /// Just the window, cut from the display it's mostly on, for still images: exact size, no shadow.
+    static func windowOnDisplay(_ windowID: CGWindowID) async throws -> (filter: SCContentFilter, rect: CGRect) {
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        guard let window = content.windows.first(where: { $0.windowID == windowID }) else {
+            throw CaptureError.noWindow
+        }
+        let display = content.displays.max { lhs, rhs in
+            overlapArea(window.frame, lhs.frame) < overlapArea(window.frame, rhs.frame)
+        }
+        guard let display, let rect = ScreenGeometry.windowRect(window.frame, onDisplay: display.frame) else {
+            throw CaptureError.noDisplay
+        }
+        return (SCContentFilter(display: display, including: [window]), rect)
+    }
+
+    private static func overlapArea(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {
+        let overlap = lhs.intersection(rhs)
+        return overlap.isNull ? 0 : overlap.width * overlap.height
+    }
+
     /// Crops the configuration to the selection's area, if any, and sizes it to the source's real pixels.
     static func applyRegion(of filter: SCContentFilter, area: CGRect?, to config: SCStreamConfiguration) {
         let scale = CGFloat(filter.pointPixelScale)

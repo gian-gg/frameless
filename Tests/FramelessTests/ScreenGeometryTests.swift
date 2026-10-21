@@ -27,6 +27,18 @@ struct ScreenGeometryTests {
         #expect(rect == CGRect(x: -300, y: 1180, width: 400, height: 100))
     }
 
+    @Test("places a window relative to its display and clips it to the display")
+    func windowRectOnDisplay() {
+        let display = CGRect(x: 1920, y: -200, width: 1512, height: 982)
+        #expect(
+            ScreenGeometry.windowRect(CGRect(x: 2000, y: -100, width: 800, height: 600), onDisplay: display)
+                == CGRect(x: 80, y: 100, width: 800, height: 600))
+        #expect(
+            ScreenGeometry.windowRect(CGRect(x: 3000, y: 500, width: 800, height: 600), onDisplay: display)
+                == CGRect(x: 1080, y: 700, width: 432, height: 282))
+        #expect(ScreenGeometry.windowRect(CGRect(x: 0, y: 0, width: 800, height: 600), onDisplay: display) == nil)
+    }
+
     @Test("returns nil for a rect entirely off the screen")
     func offScreenIsNil() {
         let area = ScreenGeometry.captureArea(

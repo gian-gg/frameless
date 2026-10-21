@@ -20,6 +20,13 @@ enum ScreenGeometry {
         return CaptureArea(sourceRect: sourceRect, width: size.width, height: size.height)
     }
 
+    /// A window's frame relative to a display, clipped to it; both in Core Graphics global points.
+    static func windowRect(_ window: CGRect, onDisplay display: CGRect) -> CGRect? {
+        let visible = window.intersection(display)
+        guard !visible.isNull, visible.width > 0, visible.height > 0 else { return nil }
+        return visible.offsetBy(dx: -display.minX, dy: -display.minY)
+    }
+
     /// Flips a Core Graphics global rect (top-left of the primary display) to AppKit global (bottom-left).
     static func appKitRect(fromCG rect: CGRect, primaryScreenHeight: CGFloat) -> CGRect {
         CGRect(x: rect.minX, y: primaryScreenHeight - rect.maxY, width: rect.width, height: rect.height)

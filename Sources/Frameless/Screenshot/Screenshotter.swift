@@ -13,10 +13,20 @@ enum Screenshotter {
 
     /// Captures the display, area or window at full pixel resolution without the cursor; returns the saved file.
     static func capture(_ selection: CaptureSelection) async throws -> URL {
-        let filter = try await CaptureSource.filter(for: selection)
-        let scale = CGFloat(filter.pointPixelScale)
         let config = SCStreamConfiguration()
-        CaptureSource.applyRegion(of: filter, area: selection.area, to: config)
+        let filter: SCContentFilter
+        if case .window(let windowID) = selection.target {
+            let window = try await CaptureSource.windowOnDisplay(windowID)
+            filter = window.filter
+            let scale = CGFloat(filter.pointPixelScale)
+            config.sourceRect = window.rect
+            config.width = Int((window.rect.width * scale).rounded())
+            config.height = Int((window.rect.height * scale).rounded())
+        } else {
+            filter = try await CaptureSource.filter(for: selection)
+            CaptureSource.applyRegion(of: filter, area: selection.area, to: config)
+        }
+        let scale = CGFloat(filter.pointPixelScale)
         config.captureResolution = .best
         config.showsCursor = false
 
