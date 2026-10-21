@@ -23,11 +23,16 @@ enum Config {
 
     /// Display and area picker.
     enum Overlay {
-        static let hint = "Click a screen to record it  ·  Drag to record an area  ·  Esc to cancel"
-        static let dimOpacity: CGFloat = 0.3
+        static let displayTitle = "Click to record this display"
+        static let dragHint = "Drag to record an area"
+        static let cancelHint = "Cancel"
+        static let displaySymbol = "display"
+        static let dragSymbol = "rectangle.dashed"
+        static let hoverDimOpacity: CGFloat = 0.25
+        static let idleDimOpacity: CGFloat = 0.5
+        static let pillOpacity: CGFloat = 0.75
         static let minimumDrag: CGFloat = 4
-        static let badgeFontSize: CGFloat = 13
-        static let badgeOpacity: CGFloat = 0.7
+        static let fadeDuration: TimeInterval = 0.12
     }
 
     /// Outline around a recorded area.
