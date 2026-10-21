@@ -1,6 +1,6 @@
 import ScreenCaptureKit
 
-/// Records the main display, with system audio, to disk via SCRecordingOutput.
+/// Records a chosen display, with system audio, to disk via SCRecordingOutput.
 @MainActor
 final class Recorder: NSObject {
     enum RecorderError: Error {
@@ -16,16 +16,16 @@ final class Recorder: NSObject {
     private var finishResult: Result<Void, Error>?
     private var finishContinuation: CheckedContinuation<Void, Error>?
 
-    func start(to url: URL) async throws {
+    func start(_ selection: CaptureSelection, to url: URL) async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-        let mainDisplay = content.displays.first { $0.displayID == CGMainDisplayID() }
-        guard let display = mainDisplay ?? content.displays.first else {
+        guard let display = content.displays.first(where: { $0.displayID == selection.displayID }) else {
             throw RecorderError.noDisplay
         }
         let ownApps = content.applications.filter { $0.bundleIdentifier == Bundle.main.bundleIdentifier }
         let filter = SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: [])
+        let config = Self.configuration(for: filter)
 
-        let stream = SCStream(filter: filter, configuration: Self.configuration(for: filter), delegate: self)
+        let stream = SCStream(filter: filter, configuration: config, delegate: self)
         let output = SCRecordingOutput(configuration: Self.outputConfiguration(to: url), delegate: self)
         try stream.addRecordingOutput(output)
 
@@ -51,9 +51,9 @@ final class Recorder: NSObject {
 
     private static func configuration(for filter: SCContentFilter) -> SCStreamConfiguration {
         let config = SCStreamConfiguration()
-        let scale = CGFloat(filter.pointPixelScale)
-        config.width = Int(filter.contentRect.width * scale)
-        config.height = Int(filter.contentRect.height * scale)
+        let size = ScreenGeometry.evenPixelSize(filter.contentRect.size, scale: CGFloat(filter.pointPixelScale))
+        config.width = size.width
+        config.height = size.height
         config.captureResolution = .best
         config.minimumFrameInterval = CMTime(value: 1, timescale: 60)
         config.showsCursor = true

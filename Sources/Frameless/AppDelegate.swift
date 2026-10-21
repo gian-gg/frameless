@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
 
     private let recorder = Recorder()
+    private let selector = AreaSelector()
     private var state = State.idle
     private var statusItem: NSStatusItem?
     private var menu: NSMenu?
@@ -45,9 +46,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         state = .busy
         Task {
+            guard let selection = await selector.select() else { return showIdle() }
             do {
                 let url = try RecordingFile.directory().appending(path: RecordingFile.name(for: .now))
-                try await recorder.start(to: url)
+                try await recorder.start(selection, to: url)
                 showRecording(since: .now)
             } catch let error as SCStreamError where error.code == .userDeclined {
                 showIdle()
