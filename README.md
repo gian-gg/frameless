@@ -1,3 +1,5 @@
+<img src="assets/logo.png" alt="Frameless" width="80" height="80">
+
 # Frameless
 
 A lightweight screenshot and screen recording tool for macOS that lives in the menu bar.

@@ -1,4 +1,6 @@
 APP := build/Frameless.app
+ICON := build/AppIcon.icns
+ICONSET := build/AppIcon.iconset
 SOURCES := Package.swift Sources Tests
 SIGN_ID ?= $(shell security find-identity -v -p codesigning | grep -q '"Frameless Dev"' && echo "Frameless Dev" || echo "-")
 
@@ -15,11 +17,21 @@ endif
 build:
 	swift build -c release
 
-app: build
+$(ICON): assets/logo.png
+	rm -rf $(ICONSET)
+	mkdir -p $(ICONSET)
+	for size in 16 32 128 256 512; do \
+		sips -z $$size $$size $< --out $(ICONSET)/icon_$${size}x$${size}.png >/dev/null; \
+		sips -z $$((size * 2)) $$((size * 2)) $< --out $(ICONSET)/icon_$${size}x$${size}@2x.png >/dev/null; \
+	done
+	iconutil -c icns -o $@ $(ICONSET)
+
+app: build $(ICON)
 	rm -rf $(APP)
-	mkdir -p $(APP)/Contents/MacOS
+	mkdir -p $(APP)/Contents/MacOS $(APP)/Contents/Resources
 	cp .build/release/Frameless $(APP)/Contents/MacOS/
 	cp Resources/Info.plist $(APP)/Contents/
+	cp $(ICON) $(APP)/Contents/Resources/
 	codesign --force --options runtime --entitlements Resources/Frameless.entitlements --sign "$(SIGN_ID)" $(APP)
 
 run: app
