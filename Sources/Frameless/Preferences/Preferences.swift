@@ -8,6 +8,7 @@ final class Preferences {
         static let capturesMicrophone = "capturesMicrophone"
         static let showsCursor = "showsCursor"
         static let videoCodec = "videoCodec"
+        static let frameRate = "frameRate"
     }
 
     private let defaults: UserDefaults
@@ -19,6 +20,7 @@ final class Preferences {
             Key.capturesMicrophone: Config.Recording.capturesMicrophone,
             Key.showsCursor: Config.Recording.showsCursor,
             Key.videoCodec: Config.Recording.videoCodec.rawValue,
+            Key.frameRate: Config.Recording.frameRate.rawValue,
         ])
     }
 
@@ -44,9 +46,14 @@ final class Preferences {
         set { defaults.set(newValue.rawValue, forKey: Key.videoCodec) }
     }
 
+    var frameRate: FrameRate {
+        get { FrameRate(rawValue: defaults.integer(forKey: Key.frameRate)) ?? Config.Recording.frameRate }
+        set { defaults.set(newValue.rawValue, forKey: Key.frameRate) }
+    }
+
     var recordingOptions: RecordingOptions {
         RecordingOptions(
             capturesSystemAudio: capturesSystemAudio, capturesMicrophone: capturesMicrophone, showsCursor: showsCursor,
-            videoCodec: videoCodec)
+            videoCodec: videoCodec, frameRate: frameRate)
     }
 }

@@ -72,16 +72,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(toggleItem("Microphone", \.capturesMicrophone, action: #selector(toggleMicrophone(_:))))
         menu.addItem(toggleItem("Show Cursor", \.showsCursor))
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quality", action: nil, keyEquivalent: "").submenu = makeQualityMenu()
+        menu.addItem(withTitle: "Quality", action: nil, keyEquivalent: "").submenu = choiceMenu(
+            VideoCodec.allCases, title: \.title, action: #selector(selectCodec(_:)))
+        menu.addItem(withTitle: "Frame Rate", action: nil, keyEquivalent: "").submenu = choiceMenu(
+            FrameRate.allCases, title: \.title, action: #selector(selectFrameRate(_:)))
         return menu
     }
 
-    private func makeQualityMenu() -> NSMenu {
+    private func choiceMenu<Choice>(_ choices: [Choice], title: (Choice) -> String, action: Selector) -> NSMenu {
         let menu = NSMenu()
-        for codec in VideoCodec.allCases {
-            let item = menu.addItem(withTitle: codec.title, action: #selector(selectCodec(_:)), keyEquivalent: "")
+        for choice in choices {
+            let item = menu.addItem(withTitle: title(choice), action: action, keyEquivalent: "")
             item.target = self
-            item.representedObject = codec
+            item.representedObject = choice
         }
         return menu
     }
@@ -89,6 +92,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func selectCodec(_ sender: NSMenuItem) {
         guard let codec = sender.representedObject as? VideoCodec else { return }
         preferences.videoCodec = codec
+    }
+
+    @objc private func selectFrameRate(_ sender: NSMenuItem) {
+        guard let frameRate = sender.representedObject as? FrameRate else { return }
+        preferences.frameRate = frameRate
     }
 
     private func toggleItem(
@@ -234,6 +242,10 @@ extension AppDelegate: NSMenuItemValidation {
         }
         if let codec = menuItem.representedObject as? VideoCodec {
             menuItem.state = preferences.videoCodec == codec ? .on : .off
+            return true
+        }
+        if let frameRate = menuItem.representedObject as? FrameRate {
+            menuItem.state = preferences.frameRate == frameRate ? .on : .off
             return true
         }
         guard menuItem.action == #selector(startRecording) else { return true }

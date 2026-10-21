@@ -6,7 +6,7 @@ import Foundation
 enum Config {
     /// Capture and encoding settings.
     enum Recording {
-        static let maxFramesPerSecond: Int32 = 60
+        static let frameRate = FrameRate.fps60
         static let fileType: AVFileType = .mp4
         static let videoCodec = VideoCodec.h264
         static let showsCursor = true

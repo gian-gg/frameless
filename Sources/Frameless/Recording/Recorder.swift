@@ -66,7 +66,7 @@ final class Recorder: NSObject {
             config.height = size.height
         }
         config.captureResolution = .best
-        config.minimumFrameInterval = CMTime(value: 1, timescale: Config.Recording.maxFramesPerSecond)
+        config.minimumFrameInterval = CMTime(value: 1, timescale: Int32(options.frameRate.rawValue))
         config.showsCursor = options.showsCursor
         config.capturesAudio = options.capturesSystemAudio
         config.captureMicrophone = options.capturesMicrophone
