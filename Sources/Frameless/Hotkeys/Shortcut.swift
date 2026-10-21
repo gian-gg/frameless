@@ -71,6 +71,40 @@ struct Shortcut: Codable, Equatable, Sendable {
         modifiers.symbols + Self.keyName(for: keyCode)
     }
 
+    /// The key as an `NSMenuItem` key equivalent, so a menu shows the shortcut; nil when it has no character.
+    var menuKeyEquivalent: String? {
+        if let special = Self.menuSpecialKeys[Int(keyCode)] { return special }
+        return Self.layoutCharacter(for: keyCode)?.lowercased()
+    }
+
+    /// The modifiers as an `NSMenuItem` modifier mask.
+    var menuModifierFlags: NSEvent.ModifierFlags {
+        var flags: NSEvent.ModifierFlags = []
+        if modifiers.contains(.control) { flags.insert(.control) }
+        if modifiers.contains(.option) { flags.insert(.option) }
+        if modifiers.contains(.shift) { flags.insert(.shift) }
+        if modifiers.contains(.command) { flags.insert(.command) }
+        return flags
+    }
+
+    private static let menuSpecialKeys: [Int: String] = {
+        var keys: [Int: String] = [
+            kVK_Return: "\r", kVK_Tab: "\t", kVK_Space: " ", kVK_Delete: "\u{8}", kVK_Escape: "\u{1b}",
+        ]
+        let functionKeys: [(Int, Int)] = [
+            (kVK_LeftArrow, NSLeftArrowFunctionKey), (kVK_RightArrow, NSRightArrowFunctionKey),
+            (kVK_UpArrow, NSUpArrowFunctionKey), (kVK_DownArrow, NSDownArrowFunctionKey),
+            (kVK_F1, NSF1FunctionKey), (kVK_F2, NSF2FunctionKey), (kVK_F3, NSF3FunctionKey), (kVK_F4, NSF4FunctionKey),
+            (kVK_F5, NSF5FunctionKey), (kVK_F6, NSF6FunctionKey), (kVK_F7, NSF7FunctionKey), (kVK_F8, NSF8FunctionKey),
+            (kVK_F9, NSF9FunctionKey), (kVK_F10, NSF10FunctionKey), (kVK_F11, NSF11FunctionKey),
+            (kVK_F12, NSF12FunctionKey),
+        ]
+        for (keyCode, unicode) in functionKeys {
+            if let scalar = UnicodeScalar(unicode) { keys[keyCode] = String(Character(scalar)) }
+        }
+        return keys
+    }()
+
     private static let namedKeys: [Int: String] = [
         kVK_Return: "↩", kVK_Tab: "⇥", kVK_Space: "Space", kVK_Delete: "⌫", kVK_ForwardDelete: "⌦",
         kVK_Escape: "⎋", kVK_LeftArrow: "←", kVK_RightArrow: "→", kVK_UpArrow: "↑", kVK_DownArrow: "↓",

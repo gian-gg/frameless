@@ -58,4 +58,21 @@ struct PreferencesTests {
         defaults.set("vp9", forKey: "videoCodec")
         #expect(Preferences(defaults: defaults).videoCodec == Config.Recording.videoCodec)
     }
+
+    @Test("shortcuts default until changed, and stay cleared once cleared")
+    func storesShortcuts() throws {
+        let defaults = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let preferences = Preferences(defaults: defaults)
+        #expect(preferences.shortcut(for: .screenshot) == Config.Shortcuts.screenshot)
+
+        let custom = Shortcut(keyCode: 15, modifiers: [.control, .option])
+        preferences.setShortcut(custom, for: .screenshot)
+        preferences.setShortcut(nil, for: .record)
+
+        let reloaded = Preferences(defaults: defaults)
+        #expect(reloaded.shortcut(for: .screenshot) == custom)
+        #expect(reloaded.shortcut(for: .record) == nil)
+    }
 }

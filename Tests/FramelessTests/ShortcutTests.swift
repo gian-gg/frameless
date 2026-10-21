@@ -49,4 +49,11 @@ struct ShortcutTests {
         let decoded = try JSONDecoder().decode(Shortcut.self, from: JSONEncoder().encode(original))
         #expect(decoded == original)
     }
+
+    @Test("describes itself as a menu key equivalent")
+    func menuKeyEquivalent() {
+        let shortcut = shortcut(kVK_Return, [.control, .command])
+        #expect(shortcut.menuKeyEquivalent == "\r")
+        #expect(shortcut.menuModifierFlags == [.control, .command])
+    }
 }

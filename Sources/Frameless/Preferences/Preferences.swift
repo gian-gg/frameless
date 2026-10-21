@@ -11,6 +11,7 @@ final class Preferences {
         static let frameRate = "frameRate"
         static let resolution = "resolution"
         static let playsSounds = "playsSounds"
+        static func shortcut(_ action: Hotkeys.Action) -> String { "shortcut.\(action)" }
     }
 
     private let defaults: UserDefaults
@@ -65,6 +66,22 @@ final class Preferences {
     var playsSounds: Bool {
         get { defaults.bool(forKey: Key.playsSounds) }
         set { defaults.set(newValue, forKey: Key.playsSounds) }
+    }
+
+    /// An action's shortcut: the default until changed, nil once cleared.
+    func shortcut(for action: Hotkeys.Action) -> Shortcut? {
+        guard let data = defaults.data(forKey: Key.shortcut(action)) else {
+            return Config.Shortcuts.shortcut(for: action)
+        }
+        do {
+            return try JSONDecoder().decode(Shortcut?.self, from: data)
+        } catch {
+            return Config.Shortcuts.shortcut(for: action)
+        }
+    }
+
+    func setShortcut(_ shortcut: Shortcut?, for action: Hotkeys.Action) {
+        defaults.set(try? JSONEncoder().encode(shortcut), forKey: Key.shortcut(action))
     }
 
     var recordingOptions: RecordingOptions {

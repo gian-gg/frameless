@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let outline = AreaOutline()
     private let thumbnail = CaptureThumbnail()
     private let editor = SelectionEditor()
+    private let hotkeys = Hotkeys()
     private var recordingScreen: NSScreen?
     private var state = State.idle
     private var statusItem: NSStatusItem?
@@ -30,7 +31,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu = makeMenu()
         buildRecordingMenu()
         recorder.onEndedEarly = { [weak self] end in self?.recordingEndedEarly(end) }
+        hotkeys.onPress = { [weak self] action in self?.hotkeyPressed(action) }
+        for action in Hotkeys.Action.allCases {
+            hotkeys.set(preferences.shortcut(for: action), for: action)
+        }
         showIdle()
+    }
+
+    /// Screenshot opens the picker; record starts one, or stops and saves while recording.
+    private func hotkeyPressed(_ action: Hotkeys.Action) {
+        switch action {
+        case .screenshot:
+            takeScreenshot()
+        case .record:
+            if case .recording = state { stopRecording() } else { startRecording() }
+        }
     }
 
     /// Menu shown while recording: elapsed time, stop and discard.
@@ -46,13 +61,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func makeMenu() -> NSMenu {
         let menu = NSMenu()
-        menu.addItem(withTitle: "Take Screenshot", action: #selector(takeScreenshot), keyEquivalent: "").target = self
-        menu.addItem(withTitle: "Record Screen", action: #selector(startRecording), keyEquivalent: "").target = self
+        menu.addItem(captureItem("Take Screenshot", action: #selector(takeScreenshot), shortcut: .screenshot))
+        menu.addItem(captureItem("Record Screen", action: #selector(startRecording), shortcut: .record))
         menu.addItem(.separator())
         menu.addItem(withTitle: "Preferences", action: nil, keyEquivalent: "").submenu = makePreferencesMenu()
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Frameless", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         return menu
+    }
+
+    /// A capture menu item showing its global shortcut.
+    private func captureItem(_ title: String, action: Selector, shortcut: Hotkeys.Action) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = self
+        if let shortcut = preferences.shortcut(for: shortcut), let key = shortcut.menuKeyEquivalent {
+            item.keyEquivalent = key
+            item.keyEquivalentModifierMask = shortcut.menuModifierFlags
+        }
+        return item
     }
 
     private func makePreferencesMenu() -> NSMenu {

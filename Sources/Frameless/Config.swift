@@ -1,10 +1,24 @@
 import AVFoundation
 import AppKit
+import Carbon.HIToolbox
 import CoreGraphics
 import Foundation
 
 /// App-wide constants.
 enum Config {
+    /// Default global shortcuts, beside macOS's own ⇧⌘3/4/5.
+    enum Shortcuts {
+        static let screenshot = Shortcut(keyCode: UInt32(kVK_ANSI_2), modifiers: [.shift, .command])
+        static let record = Shortcut(keyCode: UInt32(kVK_ANSI_6), modifiers: [.shift, .command])
+
+        static func shortcut(for action: Hotkeys.Action) -> Shortcut {
+            switch action {
+            case .screenshot: screenshot
+            case .record: record
+            }
+        }
+    }
+
     /// Capture and encoding settings.
     enum Recording {
         static let frameRate = FrameRate.fps60
