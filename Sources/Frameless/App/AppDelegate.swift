@@ -44,16 +44,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var state = State.idle
     private var statusItem: NSStatusItem?
     private var menu: NSMenu?
+    private let recordingMenu = NSMenu()
+    private let elapsedItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     private var timer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         menu = makeMenu()
+        buildRecordingMenu()
         recorder.onUnexpectedStop = { [weak self] error in
             self?.showIdle()
             self?.showError("Recording stopped", error)
         }
         showIdle()
+    }
+
+    /// Menu shown while recording: elapsed time, stop and discard.
+    private func buildRecordingMenu() {
+        recordingMenu.delegate = self
+        recordingMenu.addItem(elapsedItem)
+        recordingMenu.addItem(.separator())
+        recordingMenu.addItem(withTitle: "Stop and Save", action: #selector(stopRecording), keyEquivalent: "\r")
+            .target = self
+        recordingMenu.addItem(withTitle: "Discard Recording", action: #selector(discardRecording), keyEquivalent: "")
+            .target = self
     }
 
     func makeMenu() -> NSMenu {
@@ -187,20 +201,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func stopRecording() {
+        finishRecording(saving: true)
+    }
+
+    @objc private func discardRecording() {
+        finishRecording(saving: false)
+    }
+
+    /// Stops the recording, then copies the file to the clipboard or deletes it.
+    private func finishRecording(saving: Bool) {
         guard case .recording = state else { return }
         state = .busy
-        timer?.invalidate()
-        timer = nil
         outline.hide()
         Task {
             do {
                 let url = try await recorder.stop()
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.writeObjects([url as NSURL])
+                if saving {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.writeObjects([url as NSURL])
+                } else {
+                    try FileManager.default.removeItem(at: url)
+                }
                 showIdle()
             } catch {
                 showIdle()
-                showError("Couldn't save recording", error)
+                showError(saving ? "Couldn't save recording" : "Couldn't discard recording", error)
             }
         }
     }
@@ -210,38 +235,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         timer?.invalidate()
         timer = nil
         outline.hide()
-        guard let statusItem, let button = statusItem.button else { return }
-        button.attributedTitle = NSAttributedString()
-        button.image = NSImage(systemSymbolName: Config.StatusItem.symbolName, accessibilityDescription: "Frameless")
-        button.target = nil
-        button.action = nil
+        guard let statusItem else { return }
+        statusItem.button?.image = NSImage(
+            systemSymbolName: Config.StatusItem.symbolName, accessibilityDescription: "Frameless")
         statusItem.menu = menu
     }
 
     private func showRecording(since start: Date) {
         state = .recording(since: start)
-        guard let statusItem, let button = statusItem.button else { return }
-        statusItem.menu = nil
-        button.image = nil
-        button.target = self
-        button.action = #selector(stopRecording)
-        updateElapsed()
-        let interval = Config.StatusItem.timerInterval
-        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.updateElapsed() }
-        }
+        guard let statusItem else { return }
+        let red = NSImage.SymbolConfiguration(paletteColors: [.systemRed])
+        statusItem.button?.image = NSImage(
+            systemSymbolName: Config.StatusItem.recordingSymbolName, accessibilityDescription: "Recording"
+        )?.withSymbolConfiguration(red)
+        statusItem.menu = recordingMenu
     }
 
     private func updateElapsed() {
-        guard case .recording(let start) = state, let button = statusItem?.button else { return }
+        guard case .recording(let start) = state else { return }
         let font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
-        let title = NSMutableAttributedString(
-            string: "● ", attributes: [.foregroundColor: NSColor.systemRed, .font: font])
-        title.append(
-            NSAttributedString(
-                string: RecordingFile.elapsed(Date.now.timeIntervalSince(start)),
-                attributes: [.font: font]))
-        button.attributedTitle = title
+        elapsedItem.attributedTitle = NSAttributedString(
+            string: "Recording · " + RecordingFile.elapsed(Date.now.timeIntervalSince(start)),
+            attributes: [.font: font, .foregroundColor: NSColor.secondaryLabelColor])
     }
 
     private func showError(_ message: String, _ error: Error) {
@@ -263,6 +278,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if alert.runModal() == .alertFirstButtonReturn, let url = permission.settingsURL {
             NSWorkspace.shared.open(url)
         }
+    }
+}
+
+extension AppDelegate: NSMenuDelegate {
+    /// Ticks the elapsed time only while the recording menu is open.
+    func menuWillOpen(_ menu: NSMenu) {
+        guard menu === recordingMenu else { return }
+        updateElapsed()
+        let timer = Timer(timeInterval: Config.StatusItem.timerInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.updateElapsed() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        guard menu === recordingMenu else { return }
+        timer?.invalidate()
+        timer = nil
     }
 }
 

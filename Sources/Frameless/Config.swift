@@ -54,6 +54,7 @@ enum Config {
     /// Menu bar item.
     enum StatusItem {
         static let symbolName = "record.circle"
+        static let recordingSymbolName = "record.circle.fill"
         static let timerInterval: TimeInterval = 1
     }
 
