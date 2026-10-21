@@ -25,6 +25,13 @@ enum Config {
         static let screenshotExtension = "png"
     }
 
+    /// Sounds and other confirmation after a capture.
+    enum Feedback {
+        static let playsSounds = true
+        static let soundsDirectory =
+            "/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system"
+    }
+
     /// Display and area picker.
     enum Overlay {
         static let displayTitle = "Click to record this display"

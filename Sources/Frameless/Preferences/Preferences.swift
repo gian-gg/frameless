@@ -10,6 +10,7 @@ final class Preferences {
         static let videoCodec = "videoCodec"
         static let frameRate = "frameRate"
         static let resolution = "resolution"
+        static let playsSounds = "playsSounds"
     }
 
     private let defaults: UserDefaults
@@ -23,6 +24,7 @@ final class Preferences {
             Key.videoCodec: Config.Recording.videoCodec.rawValue,
             Key.frameRate: Config.Recording.frameRate.rawValue,
             Key.resolution: Config.Recording.resolution.rawValue,
+            Key.playsSounds: Config.Feedback.playsSounds,
         ])
     }
 
@@ -58,6 +60,11 @@ final class Preferences {
             defaults.string(forKey: Key.resolution).flatMap(Resolution.init(rawValue:)) ?? Config.Recording.resolution
         }
         set { defaults.set(newValue.rawValue, forKey: Key.resolution) }
+    }
+
+    var playsSounds: Bool {
+        get { defaults.bool(forKey: Key.playsSounds) }
+        set { defaults.set(newValue, forKey: Key.playsSounds) }
     }
 
     var recordingOptions: RecordingOptions {

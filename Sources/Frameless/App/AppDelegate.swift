@@ -62,6 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(withTitle: "Frame Rate", action: nil, keyEquivalent: "").submenu = choiceMenu(
             FrameRate.allCases, title: \.title, \.frameRate)
         menu.addItem(.separator())
+        menu.addItem(toggleItem("Play Sounds", \.playsSounds))
         menu.addItem(withTitle: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
             .target = self
         return menu
@@ -153,6 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             defer { showIdle() }
             do {
                 _ = try await Screenshotter.capture(selection)
+                playSound(.screenshot)
             } catch let error as SCStreamError where error.code == .userDeclined {
                 showPermissionAlert(.screenRecording)
             } catch {
@@ -184,6 +186,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 try await recorder.start(selection, options: preferences.recordingOptions, to: url)
                 outline.show(selection)
                 showRecording(since: .now)
+                playSound(.recordingStarted)
             } catch let error as SCStreamError where error.code == .userDeclined {
                 showIdle()
                 showPermissionAlert(.screenRecording)
@@ -211,7 +214,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 let url = try await recorder.stop()
                 if saving {
-                    copyToClipboard(url)
+                    recordingSaved(url)
                 } else {
                     try FileManager.default.removeItem(at: url)
                 }
@@ -230,15 +233,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         showIdle()
         switch end {
         case .saved(let url):
-            copyToClipboard(url)
+            recordingSaved(url)
         case .failed(let error):
             showError("Recording ended and couldn't be saved", error)
         }
     }
 
-    private func copyToClipboard(_ url: URL) {
+    /// Puts a saved recording on the clipboard and plays the saved sound.
+    private func recordingSaved(_ url: URL) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.writeObjects([url as NSURL])
+        playSound(.recordingSaved)
+    }
+
+    private func playSound(_ sound: CaptureSound) {
+        if preferences.playsSounds { sound.play() }
     }
 
     private func showIdle() {

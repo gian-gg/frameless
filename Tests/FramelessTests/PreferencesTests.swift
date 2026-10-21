@@ -31,12 +31,14 @@ struct PreferencesTests {
         preferences.videoCodec = .hevc
         preferences.frameRate = .fps30
         preferences.resolution = .p1080
+        preferences.playsSounds = false
 
         let reloaded = Preferences(defaults: defaults).recordingOptions
         let expected = RecordingOptions(
             capturesSystemAudio: false, capturesMicrophone: true, showsCursor: false, videoCodec: .hevc,
             frameRate: .fps30, resolution: .p1080)
         #expect(reloaded == expected)
+        #expect(Preferences(defaults: defaults).playsSounds == false)
     }
 
     @Test("an unknown saved frame rate falls back to the default")
