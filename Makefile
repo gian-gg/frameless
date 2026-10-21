@@ -1,7 +1,15 @@
 APP := build/Frameless.app
+SOURCES := Package.swift Sources Tests
 SIGN_ID ?= $(shell security find-identity -v -p codesigning | grep -q '"Frameless Dev"' && echo "Frameless Dev" || echo "-")
 
-.PHONY: build app run clean
+# SwiftLint's sourcekitd and Swift Testing's framework path when only the Command Line Tools are installed
+ifeq ($(shell xcode-select -p),/Library/Developer/CommandLineTools)
+export TOOLCHAIN_DIR := /Library/Developer/CommandLineTools
+TESTING_FW := $(TOOLCHAIN_DIR)/Library/Developer/Frameworks
+TEST_FLAGS := -Xswiftc -F -Xswiftc $(TESTING_FW) -Xlinker -rpath -Xlinker $(TESTING_FW)
+endif
+
+.PHONY: build app run clean format lint typecheck test check hooks
 
 build:
 	swift build -c release
@@ -18,3 +26,22 @@ run: app
 
 clean:
 	rm -rf .build build
+
+format:
+	swift format --in-place --recursive $(SOURCES)
+	swiftlint --fix --quiet
+
+lint:
+	swift format lint --strict --recursive $(SOURCES)
+	swiftlint --strict --quiet
+
+typecheck:
+	swift build --build-tests -Xswiftc -warnings-as-errors $(TEST_FLAGS)
+
+test: typecheck
+	swift test --skip-build
+
+check: lint test
+
+hooks:
+	git config core.hooksPath .githooks

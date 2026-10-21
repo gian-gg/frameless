@@ -12,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = item
     }
 
-    private func makeMenu() -> NSMenu {
+    func makeMenu() -> NSMenu {
         let menu = NSMenu()
         menu.addItem(withTitle: "Record Screen", action: nil, keyEquivalent: "")
         menu.addItem(.separator())

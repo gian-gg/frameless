@@ -1,0 +1,16 @@
+included:
+  - Package.swift
+  - Sources
+  - Tests
+
+disabled_rules:
+  - trailing_comma
+
+opt_in_rules:
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - empty_count
+  - first_where
+  - sorted_imports
+
+line_length: 120

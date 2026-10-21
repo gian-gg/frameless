@@ -5,6 +5,7 @@ let package = Package(
     name: "Frameless",
     platforms: [.macOS(.v15)],
     targets: [
-        .executableTarget(name: "Frameless")
+        .executableTarget(name: "Frameless"),
+        .testTarget(name: "FramelessTests", dependencies: ["Frameless"]),
     ]
 )

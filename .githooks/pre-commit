@@ -1,0 +1,3 @@
+#!/bin/sh
+# Runs lint, typecheck and tests before each commit.
+exec make check
