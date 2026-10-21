@@ -35,6 +35,9 @@ enum Config {
         static let thumbnailMargin: CGFloat = 16
         /// Glass rim around the thumbnail's preview.
         static let thumbnailRim: CGFloat = 5
+        /// Glass circles on the thumbnail: the play badge and the hover close button.
+        static let badgeSize: CGFloat = 36
+        static let closeSize: CGFloat = 24
         static let thumbnailDuration: TimeInterval = 5
         static let thumbnailFadeDuration: TimeInterval = 0.2
     }

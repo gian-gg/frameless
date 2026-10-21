@@ -88,7 +88,7 @@ final class CaptureThumbnail {
     }
 }
 
-/// The preview itself: rounded image, play badge for recordings, close button on hover.
+/// The preview itself: rounded image, glass play badge for recordings, glass close button on hover.
 private final class ThumbnailView: NSView, NSDraggingSource {
     private static let dragThreshold: CGFloat = 4
 
@@ -98,7 +98,8 @@ private final class ThumbnailView: NSView, NSDraggingSource {
 
     private let image: CGImage
     private let fileURL: URL
-    private let closeButton = NSButton()
+    private let closeControl = GlassPanel(
+        frame: CGRect(x: 0, y: 0, width: Config.Feedback.closeSize, height: Config.Feedback.closeSize))
     private var mouseDownPoint: CGPoint?
 
     init(image: CGImage, fileURL: URL) {
@@ -119,35 +120,52 @@ private final class ThumbnailView: NSView, NSDraggingSource {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    /// Glass circle with a play icon, marking a recording; clicks pass through to open it.
     private func addPlayBadge() {
-        let badge = NSImageView(image: symbol("play.circle.fill", size: 30))
-        badge.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(badge)
-        NSLayoutConstraint.activate([
-            badge.centerXAnchor.constraint(equalTo: centerXAnchor),
-            badge.centerYAnchor.constraint(equalTo: centerYAnchor),
-        ])
+        let side = Config.Feedback.badgeSize
+        let badge = GlassPanel(frame: CGRect(x: 0, y: 0, width: side, height: side))
+        let config = NSImage.SymbolConfiguration(pointSize: side * 0.4, weight: .semibold)
+            .applying(NSImage.SymbolConfiguration(paletteColors: [.labelColor]))
+        let play = NSImageView(
+            image: NSImage(systemSymbolName: "play.fill", accessibilityDescription: "Recording")?
+                .withSymbolConfiguration(config) ?? NSImage())
+        play.frame = badge.bounds
+        play.autoresizingMask = [.width, .height]
+        badge.content.addSubview(play)
+        pin(badge, size: side) {
+            [
+                $0.centerXAnchor.constraint(equalTo: centerXAnchor),
+                $0.centerYAnchor.constraint(equalTo: centerYAnchor),
+            ]
+        }
     }
 
+    /// Glass circle with ×, matching the bars' close button; shown on hover.
     private func addCloseButton() {
-        closeButton.image = symbol("xmark.circle.fill", size: 16)
-        closeButton.isBordered = false
-        closeButton.target = self
-        closeButton.action = #selector(close)
-        closeButton.isHidden = true
-        closeButton.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(closeButton)
-        NSLayoutConstraint.activate([
-            closeButton.topAnchor.constraint(equalTo: topAnchor, constant: 6),
-            closeButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6),
-        ])
+        let side = Config.Feedback.closeSize
+        let button = BarButton(symbol: "xmark", title: nil, toolTip: "Dismiss")
+        button.target = self
+        button.action = #selector(close)
+        button.frame = closeControl.bounds
+        button.autoresizingMask = [.width, .height]
+        closeControl.content.addSubview(button)
+        closeControl.isHidden = true
+        let inset = Config.Feedback.thumbnailRim
+        pin(closeControl, size: side) {
+            [
+                $0.topAnchor.constraint(equalTo: topAnchor, constant: inset),
+                $0.leadingAnchor.constraint(equalTo: leadingAnchor, constant: inset),
+            ]
+        }
     }
 
-    private func symbol(_ name: String, size: CGFloat) -> NSImage {
-        let config = NSImage.SymbolConfiguration(pointSize: size, weight: .regular)
-            .applying(NSImage.SymbolConfiguration(paletteColors: [.white, NSColor.black.withAlphaComponent(0.5)]))
-        return NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(config)
-            ?? NSImage()
+    /// Adds a square subview of `size` with the given position constraints.
+    private func pin(_ view: NSView, size: CGFloat, position: (NSView) -> [NSLayoutConstraint]) {
+        view.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(view)
+        NSLayoutConstraint.activate(
+            [view.widthAnchor.constraint(equalToConstant: size), view.heightAnchor.constraint(equalToConstant: size)]
+                + position(view))
     }
 
     @objc private func close() {
@@ -165,12 +183,12 @@ private final class ThumbnailView: NSView, NSDraggingSource {
     }
 
     override func mouseEntered(with event: NSEvent) {
-        closeButton.isHidden = false
+        closeControl.isHidden = false
         onHoverChange?(true)
     }
 
     override func mouseExited(with event: NSEvent) {
-        closeButton.isHidden = true
+        closeControl.isHidden = true
         onHoverChange?(false)
     }
 
