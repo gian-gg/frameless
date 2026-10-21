@@ -7,6 +7,7 @@ final class Recorder: NSObject {
         case noDisplay
         case noWindow
         case notRecording
+        case alreadyStopping
         case unfinished
 
         var errorDescription: String? {
@@ -14,9 +15,16 @@ final class Recorder: NSObject {
             case .noDisplay: "That display is no longer connected."
             case .noWindow: "That window is no longer open."
             case .notRecording: "Nothing is being recorded."
+            case .alreadyStopping: "The recording is already being saved."
             case .unfinished: "The recording file couldn't be finished."
             }
         }
+    }
+
+    private enum State {
+        case idle
+        case recording(SCStream, URL)
+        case stopping
     }
 
     /// How a recording that macOS stopped on its own turned out.
@@ -27,11 +35,8 @@ final class Recorder: NSObject {
 
     var onEndedEarly: (@MainActor (EarlyEnd) -> Void)?
 
-    private var stream: SCStream?
-    private var outputURL: URL?
-    private var isStopping = false
-    private var finishResult: Result<Void, Error>?
-    private var finishContinuation: CheckedContinuation<Void, Error>?
+    private var state = State.idle
+    private var finished = FinishSignal()
 
     func start(_ selection: CaptureSelection, options: RecordingOptions, to url: URL) async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
@@ -43,19 +48,24 @@ final class Recorder: NSObject {
             configuration: Self.outputConfiguration(to: url, codec: options.videoCodec), delegate: self)
         try stream.addRecordingOutput(output)
 
-        finishResult = nil
+        finished = FinishSignal()
         try await stream.startCapture()
-        self.stream = stream
-        outputURL = url
+        state = .recording(stream, url)
     }
 
     func stop() async throws -> URL {
-        guard let stream, let outputURL, !isStopping else { throw RecorderError.notRecording }
-        isStopping = true
-        defer { reset() }
-        try await stream.stopCapture()
-        try await waitForFinish()
-        return outputURL
+        switch state {
+        case .idle:
+            throw RecorderError.notRecording
+        case .stopping:
+            throw RecorderError.alreadyStopping
+        case .recording(let stream, let url):
+            state = .stopping
+            defer { state = .idle }
+            try await stream.stopCapture()
+            try await waitForFinish()
+            return url
+        }
     }
 
     /// A single-window filter, or the selection's display minus Frameless's own windows.
@@ -112,45 +122,21 @@ final class Recorder: NSObject {
 
     /// Waits for the file to be finished, failing after `Config.Recording.finishTimeout`.
     private func waitForFinish() async throws {
-        if let finishResult {
-            return try finishResult.get()
-        }
-        let timeout = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(Config.Recording.finishTimeout))
-            guard !Task.isCancelled else { return }
-            self?.finish(.failure(RecorderError.unfinished))
-        }
-        defer { timeout.cancel() }
-        try await withCheckedThrowingContinuation { finishContinuation = $0 }
-    }
-
-    private func finish(_ result: Result<Void, Error>) {
-        guard let continuation = finishContinuation else {
-            finishResult = result
-            return
-        }
-        finishContinuation = nil
-        continuation.resume(with: result)
-    }
-
-    private func reset() {
-        isStopping = false
-        finishResult = nil
-        stream = nil
-        outputURL = nil
+        try await finished.wait(
+            timeout: .seconds(Config.Recording.finishTimeout), timeoutError: RecorderError.unfinished)
     }
 
     /// The stream ended without being asked to: keep the file if it can still be finished.
     private func streamStopped() {
-        guard !isStopping, let outputURL else { return }
-        isStopping = true
+        guard case .recording(_, let url) = state else { return }
+        state = .stopping
         Task {
-            defer { reset() }
+            defer { state = .idle }
             do {
                 try await waitForFinish()
-                onEndedEarly?(.saved(outputURL))
+                onEndedEarly?(.saved(url))
             } catch {
-                try? FileManager.default.removeItem(at: outputURL)
+                try? FileManager.default.removeItem(at: url)
                 onEndedEarly?(.failed(error))
             }
         }
@@ -158,16 +144,15 @@ final class Recorder: NSObject {
 
     /// The file couldn't be written: stop capturing and drop the partial file.
     private func outputFailed(_ error: Error) {
-        if isStopping {
-            finish(.failure(error))
+        guard case .recording(let stream, let url) = state else {
+            finished.finish(.failure(error))
             return
         }
-        guard let stream, let outputURL else { return }
-        isStopping = true
+        state = .stopping
         Task {
-            defer { reset() }
+            defer { state = .idle }
             try? await stream.stopCapture()
-            try? FileManager.default.removeItem(at: outputURL)
+            try? FileManager.default.removeItem(at: url)
             onEndedEarly?(.failed(error))
         }
     }
@@ -179,7 +164,7 @@ extension Recorder: SCStreamDelegate, SCRecordingOutputDelegate {
     }
 
     nonisolated func recordingOutputDidFinishRecording(_ recordingOutput: SCRecordingOutput) {
-        Task { @MainActor in self.finish(.success(())) }
+        Task { @MainActor in self.finished.finish(.success(())) }
     }
 
     nonisolated func recordingOutput(_ recordingOutput: SCRecordingOutput, didFailWithError error: Error) {

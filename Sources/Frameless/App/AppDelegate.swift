@@ -190,6 +190,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     try FileManager.default.removeItem(at: url)
                 }
                 showIdle()
+            } catch Recorder.RecorderError.alreadyStopping {
+                // recordingEndedEarly resets the menu and reports the result.
             } catch {
                 showIdle()
                 showError(saving ? "Couldn't save recording" : "Couldn't discard recording", error)
