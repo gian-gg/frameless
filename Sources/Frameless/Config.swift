@@ -21,7 +21,7 @@ enum Config {
         static let folderName = "Frameless"
         static let namePrefix = "Frameless"
         static let dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
-        static let fileExtension = "mp4"
+        static let recordingExtension = "mp4"
     }
 
     /// Display and area picker.

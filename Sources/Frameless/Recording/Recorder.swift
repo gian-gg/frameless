@@ -4,16 +4,12 @@ import ScreenCaptureKit
 @MainActor
 final class Recorder: NSObject {
     enum RecorderError: LocalizedError {
-        case noDisplay
-        case noWindow
         case notRecording
         case alreadyStopping
         case unfinished
 
         var errorDescription: String? {
             switch self {
-            case .noDisplay: "That display is no longer connected."
-            case .noWindow: "That window is no longer open."
             case .notRecording: "Nothing is being recorded."
             case .alreadyStopping: "The recording is already being saved."
             case .unfinished: "The recording file couldn't be finished."
@@ -39,8 +35,7 @@ final class Recorder: NSObject {
     private var finished = FinishSignal()
 
     func start(_ selection: CaptureSelection, options: RecordingOptions, to url: URL) async throws {
-        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-        let filter = try Self.filter(for: selection, in: content)
+        let filter = try await CaptureSource.filter(for: selection)
         let config = Self.configuration(for: filter, area: selection.area, options: options)
 
         let stream = SCStream(filter: filter, configuration: config, delegate: self)
@@ -66,23 +61,6 @@ final class Recorder: NSObject {
             try await waitForFinish()
             return url
         }
-    }
-
-    /// A single-window filter, or the selection's display minus Frameless's own windows.
-    private static func filter(
-        for selection: CaptureSelection, in content: SCShareableContent
-    ) throws -> SCContentFilter {
-        if case .window(let windowID) = selection.target {
-            guard let window = content.windows.first(where: { $0.windowID == windowID }) else {
-                throw RecorderError.noWindow
-            }
-            return SCContentFilter(desktopIndependentWindow: window)
-        }
-        guard let display = content.displays.first(where: { $0.displayID == selection.displayID }) else {
-            throw RecorderError.noDisplay
-        }
-        let ownApps = content.applications.filter { $0.bundleIdentifier == Bundle.main.bundleIdentifier }
-        return SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: [])
     }
 
     private static func configuration(

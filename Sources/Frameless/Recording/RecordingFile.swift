@@ -1,19 +1,13 @@
 import Foundation
 
-/// Output folder, file names and elapsed-time labels for recordings.
+/// Folder, file names and elapsed-time labels for recordings.
 enum RecordingFile {
     static func directory() throws -> URL {
-        let url = URL.moviesDirectory.appending(path: Config.Output.folderName, directoryHint: .isDirectory)
-        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        return url
+        try OutputFile.directory(in: .moviesDirectory)
     }
 
     static func name(for date: Date, timeZone: TimeZone = .current) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = timeZone
-        formatter.dateFormat = Config.Output.dateFormat
-        return "\(Config.Output.namePrefix) \(formatter.string(from: date)).\(Config.Output.fileExtension)"
+        OutputFile.name(for: date, fileExtension: Config.Output.recordingExtension, timeZone: timeZone)
     }
 
     static func elapsed(_ seconds: TimeInterval) -> String {
