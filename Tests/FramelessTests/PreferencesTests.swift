@@ -30,11 +30,12 @@ struct PreferencesTests {
         preferences.showsCursor = false
         preferences.videoCodec = .hevc
         preferences.frameRate = .fps30
+        preferences.resolution = .p1080
 
         let reloaded = Preferences(defaults: defaults).recordingOptions
         let expected = RecordingOptions(
             capturesSystemAudio: false, capturesMicrophone: true, showsCursor: false, videoCodec: .hevc,
-            frameRate: .fps30)
+            frameRate: .fps30, resolution: .p1080)
         #expect(reloaded == expected)
     }
 

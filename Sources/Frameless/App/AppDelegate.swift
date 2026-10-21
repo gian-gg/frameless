@@ -72,8 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(toggleItem("Microphone", \.capturesMicrophone, action: #selector(toggleMicrophone(_:))))
         menu.addItem(toggleItem("Show Cursor", \.showsCursor))
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quality", action: nil, keyEquivalent: "").submenu = choiceMenu(
-            VideoCodec.allCases, title: \.title, action: #selector(selectCodec(_:)))
+        menu.addItem(withTitle: "Quality", action: nil, keyEquivalent: "").submenu = makeQualityMenu()
         menu.addItem(withTitle: "Frame Rate", action: nil, keyEquivalent: "").submenu = choiceMenu(
             FrameRate.allCases, title: \.title, action: #selector(selectFrameRate(_:)))
         menu.addItem(.separator())
@@ -82,14 +81,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return menu
     }
 
+    private func makeQualityMenu() -> NSMenu {
+        let menu = NSMenu()
+        menu.addItem(.sectionHeader(title: "Codec"))
+        choiceItems(VideoCodec.allCases, title: \.title, action: #selector(selectCodec(_:))).forEach(menu.addItem)
+        menu.addItem(.separator())
+        menu.addItem(.sectionHeader(title: "Resolution"))
+        choiceItems(Resolution.allCases, title: \.title, action: #selector(selectResolution(_:))).forEach(menu.addItem)
+        return menu
+    }
+
     private func choiceMenu<Choice>(_ choices: [Choice], title: (Choice) -> String, action: Selector) -> NSMenu {
         let menu = NSMenu()
-        for choice in choices {
-            let item = menu.addItem(withTitle: title(choice), action: action, keyEquivalent: "")
+        choiceItems(choices, title: title, action: action).forEach(menu.addItem)
+        return menu
+    }
+
+    private func choiceItems<Choice>(
+        _ choices: [Choice], title: (Choice) -> String, action: Selector
+    ) -> [NSMenuItem] {
+        choices.map { choice in
+            let item = NSMenuItem(title: title(choice), action: action, keyEquivalent: "")
             item.target = self
             item.representedObject = choice
+            return item
         }
-        return menu
+    }
+
+    @objc private func selectResolution(_ sender: NSMenuItem) {
+        guard let resolution = sender.representedObject as? Resolution else { return }
+        preferences.resolution = resolution
     }
 
     @objc private func selectCodec(_ sender: NSMenuItem) {
@@ -257,6 +278,10 @@ extension AppDelegate: NSMenuItemValidation {
         }
         if let frameRate = menuItem.representedObject as? FrameRate {
             menuItem.state = preferences.frameRate == frameRate ? .on : .off
+            return true
+        }
+        if let resolution = menuItem.representedObject as? Resolution {
+            menuItem.state = preferences.resolution == resolution ? .on : .off
             return true
         }
         if menuItem.action == #selector(toggleLaunchAtLogin) {

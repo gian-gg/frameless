@@ -44,6 +44,23 @@ struct ScreenGeometryTests {
     }
 
     @Test(
+        "fits a pixel size within a resolution box, keeping its shape",
+        arguments: zip(
+            [
+                ((3024, 1964), CGSize(width: 1920, height: 1080)),
+                ((1000, 2000), CGSize(width: 1920, height: 1080)),
+                ((900, 600), CGSize(width: 1920, height: 1080)),
+                ((1920, 1080), CGSize(width: 1920, height: 1080)),
+                ((3024, 1964), nil),
+            ] as [((Int, Int), CGSize?)],
+            [(1662, 1080), (960, 1920), (900, 600), (1920, 1080), (3024, 1964)]))
+    func fitsWithinBox(input: ((Int, Int), CGSize?), expected: (Int, Int)) {
+        let size = ScreenGeometry.fitted(input.0, within: input.1)
+        #expect(size.width == expected.0)
+        #expect(size.height == expected.1)
+    }
+
+    @Test(
         "rounds pixel sizes down to even numbers",
         arguments: [
             (CGSize(width: 1512, height: 982), 2.0, 3024, 1964),

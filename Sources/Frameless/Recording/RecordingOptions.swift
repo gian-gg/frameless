@@ -5,4 +5,5 @@ struct RecordingOptions: Equatable, Sendable {
     var showsCursor = Config.Recording.showsCursor
     var videoCodec = Config.Recording.videoCodec
     var frameRate = Config.Recording.frameRate
+    var resolution = Config.Recording.resolution
 }

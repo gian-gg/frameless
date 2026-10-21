@@ -87,6 +87,9 @@ final class Recorder: NSObject {
             config.width = size.width
             config.height = size.height
         }
+        let output = ScreenGeometry.fitted((config.width, config.height), within: options.resolution.maxSize)
+        config.width = output.width
+        config.height = output.height
         config.captureResolution = .best
         config.minimumFrameInterval = CMTime(value: 1, timescale: Int32(options.frameRate.rawValue))
         config.showsCursor = options.showsCursor

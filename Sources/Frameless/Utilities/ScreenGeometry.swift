@@ -25,6 +25,16 @@ enum ScreenGeometry {
         CGRect(x: rect.minX, y: primaryScreenHeight - rect.maxY, width: rect.width, height: rect.height)
     }
 
+    /// Shrinks a pixel size to fit a box (turned upright for tall sources), keeping its shape; never enlarges.
+    static func fitted(_ size: (width: Int, height: Int), within box: CGSize?) -> (width: Int, height: Int) {
+        guard let box else { return size }
+        let limit = size.height > size.width ? CGSize(width: box.height, height: box.width) : box
+        let factor = min(limit.width / CGFloat(size.width), limit.height / CGFloat(size.height))
+        guard factor < 1 else { return size }
+        func even(_ pixels: Int) -> Int { max(2, Int((CGFloat(pixels) * factor).rounded()) / 2 * 2) }
+        return (even(size.width), even(size.height))
+    }
+
     /// Pixel dimensions for a point size, rounded down to even numbers for H.264.
     static func evenPixelSize(_ size: CGSize, scale: CGFloat) -> (width: Int, height: Int) {
         func even(_ points: CGFloat) -> Int { max(2, Int(points * scale) / 2 * 2) }

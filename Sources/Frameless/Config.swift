@@ -7,6 +7,7 @@ enum Config {
     /// Capture and encoding settings.
     enum Recording {
         static let frameRate = FrameRate.fps60
+        static let resolution = Resolution.original
         static let fileType: AVFileType = .mp4
         static let videoCodec = VideoCodec.h264
         static let showsCursor = true
