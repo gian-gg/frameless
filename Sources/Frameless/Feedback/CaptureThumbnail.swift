@@ -36,9 +36,11 @@ final class CaptureThumbnail {
         let pointSize = CGSize(width: CGFloat(image.width) / scale, height: CGFloat(image.height) / scale)
         let size = Self.fittedSize(pointSize, within: Config.Feedback.thumbnailSize)
         let margin = Config.Feedback.thumbnailMargin
+        let rim = Config.Feedback.thumbnailRim
+        let outer = CGSize(width: size.width + rim * 2, height: size.height + rim * 2)
         let frame = CGRect(
-            x: screen.visibleFrame.maxX - size.width - margin, y: screen.visibleFrame.minY + margin,
-            width: size.width, height: size.height)
+            x: screen.visibleFrame.maxX - outer.width - margin, y: screen.visibleFrame.minY + margin,
+            width: outer.width, height: outer.height)
 
         let panel = NSPanel(
             contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -60,7 +62,11 @@ final class CaptureThumbnail {
         view.onHoverChange = { [weak self] isHovering in
             if isHovering { self?.dismissTask?.cancel() } else { self?.scheduleDismiss() }
         }
-        panel.contentView = view
+        let glass = GlassPanel(frame: CGRect(origin: .zero, size: outer))
+        glass.isCapsule = false
+        view.frame = CGRect(x: rim, y: rim, width: size.width, height: size.height)
+        glass.content.addSubview(view)
+        panel.contentView = glass
 
         panel.alphaValue = 0
         panel.orderFrontRegardless()
@@ -102,10 +108,8 @@ private final class ThumbnailView: NSView, NSDraggingSource {
         wantsLayer = true
         layer?.contents = image
         layer?.contentsGravity = .resizeAspectFill
-        layer?.cornerRadius = Config.Style.cornerRadius
+        layer?.cornerRadius = Config.Style.cornerRadius - Config.Feedback.thumbnailRim
         layer?.masksToBounds = true
-        layer?.borderWidth = 1
-        layer?.borderColor = NSColor.white.withAlphaComponent(0.25).cgColor
         if fileURL.pathExtension == Config.Output.recordingExtension { addPlayBadge() }
         addCloseButton()
     }

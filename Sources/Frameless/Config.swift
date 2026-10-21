@@ -33,6 +33,8 @@ enum Config {
             "/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system"
         static let thumbnailSize = CGSize(width: 200, height: 140)
         static let thumbnailMargin: CGFloat = 16
+        /// Glass rim around the thumbnail's preview.
+        static let thumbnailRim: CGFloat = 5
         static let thumbnailDuration: TimeInterval = 5
         static let thumbnailFadeDuration: TimeInterval = 0.2
     }
@@ -89,11 +91,8 @@ enum Config {
         static let minimumWindowSize: CGFloat = 40
     }
 
-    /// Viewfinder around a recorded area.
+    /// Dim around an area while it records.
     enum Outline {
-        static let gap: CGFloat = 4
-        static let cornerLength: CGFloat = 18
-        static let cornerWidth: CGFloat = 3
         static let dimOpacity: CGFloat = 0.2
     }
 

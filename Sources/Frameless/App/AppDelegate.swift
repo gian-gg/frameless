@@ -144,6 +144,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func playSound(_ sound: CaptureSound) {
+        if preferences.playsSounds { sound.play() }
+    }
+
+    private func showIdle() {
+        state = .idle
+        timer?.invalidate()
+        timer = nil
+        outline.hide()
+        guard let statusItem else { return }
+        statusItem.button?.image = NSImage(
+            systemSymbolName: Config.StatusItem.symbolName, accessibilityDescription: "Frameless")
+        statusItem.menu = menu
+    }
+
+}
+
+// MARK: - Recording
+
+extension AppDelegate {
     @objc private func startRecording() {
         guard case .idle = state, hasScreenRecordingAccess() else { return }
         if preferences.capturesMicrophone, AVCaptureDevice.authorizationStatus(for: .audio) != .authorized {
@@ -220,21 +240,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSPasteboard.general.writeObjects([url as NSURL])
         playSound(.recordingSaved)
         thumbnail.show(url, on: recordingScreen)
-    }
-
-    private func playSound(_ sound: CaptureSound) {
-        if preferences.playsSounds { sound.play() }
-    }
-
-    private func showIdle() {
-        state = .idle
-        timer?.invalidate()
-        timer = nil
-        outline.hide()
-        guard let statusItem else { return }
-        statusItem.button?.image = NSImage(
-            systemSymbolName: Config.StatusItem.symbolName, accessibilityDescription: "Frameless")
-        statusItem.menu = menu
     }
 
     private func showRecording(since start: Date) {

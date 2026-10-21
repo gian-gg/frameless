@@ -1,6 +1,6 @@
 import AppKit
 
-/// Click-through viewfinder around the area being recorded, dimming the rest of its display.
+/// Click-through frame around the area being recorded, dimming the rest of its display.
 @MainActor
 final class AreaOutline {
     private var window: NSWindow?
@@ -31,12 +31,12 @@ final class AreaOutline {
     }
 }
 
-/// Dims outside the area and draws corner brackets joined by a hairline.
+/// Dims outside the area and frames it like the picker's selection: soft line and round handles.
 private final class ViewfinderView: NSView {
-    private let frameRect: CGRect
+    private let area: CGRect
 
     init(area: CGRect) {
-        frameRect = area.insetBy(dx: -Config.Outline.gap, dy: -Config.Outline.gap)
+        self.area = area
         super.init(frame: .zero)
     }
 
@@ -47,42 +47,7 @@ private final class ViewfinderView: NSView {
         NSColor.black.withAlphaComponent(Config.Outline.dimOpacity).setFill()
         bounds.fill()
         NSColor.clear.setFill()
-        frameRect.fill(using: .copy)
-
-        let hairline = NSBezierPath(rect: frameRect.insetBy(dx: 0.5, dy: 0.5))
-        hairline.lineWidth = 1
-        NSColor.white.withAlphaComponent(0.45).setStroke()
-        hairline.stroke()
-
-        NSGraphicsContext.saveGraphicsState()
-        let shadow = NSShadow()
-        shadow.shadowColor = NSColor.black.withAlphaComponent(0.5)
-        shadow.shadowBlurRadius = 3
-        shadow.set()
-        let corners = cornerPath()
-        corners.lineWidth = Config.Outline.cornerWidth
-        corners.lineCapStyle = .round
-        corners.lineJoinStyle = .round
-        NSColor.white.setStroke()
-        corners.stroke()
-        NSGraphicsContext.restoreGraphicsState()
-    }
-
-    private func cornerPath() -> NSBezierPath {
-        let rect = frameRect.insetBy(dx: Config.Outline.cornerWidth / 2, dy: Config.Outline.cornerWidth / 2)
-        let length = min(Config.Outline.cornerLength, rect.width / 3, rect.height / 3)
-        let path = NSBezierPath()
-        let corners: [(CGPoint, CGVector)] = [
-            (CGPoint(x: rect.minX, y: rect.minY), CGVector(dx: 1, dy: 1)),
-            (CGPoint(x: rect.maxX, y: rect.minY), CGVector(dx: -1, dy: 1)),
-            (CGPoint(x: rect.minX, y: rect.maxY), CGVector(dx: 1, dy: -1)),
-            (CGPoint(x: rect.maxX, y: rect.maxY), CGVector(dx: -1, dy: -1)),
-        ]
-        for (corner, direction) in corners {
-            path.move(to: CGPoint(x: corner.x + length * direction.dx, y: corner.y))
-            path.line(to: corner)
-            path.line(to: CGPoint(x: corner.x, y: corner.y + length * direction.dy))
-        }
-        return path
+        area.fill(using: .copy)
+        Panel.drawSelectionFrame(area)
     }
 }
