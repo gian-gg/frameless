@@ -5,11 +5,6 @@ struct CaptureSelection: Equatable {
     let displayID: CGDirectDisplayID
     let screenFrame: CGRect
     let area: CGRect?
-
-    /// The area in global AppKit coordinates.
-    var globalArea: CGRect? {
-        area?.offsetBy(dx: screenFrame.minX, dy: screenFrame.minY)
-    }
 }
 
 /// Full-screen overlay that lets the user pick a display or region.

@@ -48,7 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 let url = try RecordingFile.directory().appending(path: RecordingFile.name(for: .now))
                 try await recorder.start(selection, to: url)
-                if let area = selection.globalArea { outline.show(around: area) }
+                outline.show(selection)
                 showRecording(since: .now)
             } catch let error as SCStreamError where error.code == .userDeclined {
                 showIdle()

@@ -35,10 +35,12 @@ enum Config {
         static let fadeDuration: TimeInterval = 0.12
     }
 
-    /// Outline around a recorded area.
+    /// Viewfinder around a recorded area.
     enum Outline {
-        static let gap: CGFloat = 3
-        static let lineWidth: CGFloat = 2
+        static let gap: CGFloat = 4
+        static let cornerLength: CGFloat = 18
+        static let cornerWidth: CGFloat = 3
+        static let dimOpacity: CGFloat = 0.2
     }
 
     /// Menu bar item.
