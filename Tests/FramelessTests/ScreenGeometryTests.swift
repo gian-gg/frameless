@@ -28,7 +28,7 @@ struct ScreenGeometryTests {
     }
 
     @Test(
-        "puts the toolbar below the capture, above it near the bottom, inside it when full screen",
+        "centres the bar under the capture, inside its bottom when there's no room, and keeps it on screen",
         arguments: zip(
             [
                 CGRect(x: 100, y: 300, width: 400, height: 200),
@@ -37,15 +37,30 @@ struct ScreenGeometryTests {
                 CGRect(x: 0, y: 300, width: 50, height: 100),
             ],
             [
-                CGPoint(x: 240, y: 252),
-                CGPoint(x: 240, y: 228),
-                CGPoint(x: 440, y: 8),
-                CGPoint(x: 8, y: 252),
+                CGPoint(x: 240, y: 250),
+                CGPoint(x: 240, y: 76),
+                CGPoint(x: 440, y: 56),
+                CGPoint(x: 10, y: 250),
             ]))
-    func toolbarPlacement(rect: CGRect, expected: CGPoint) {
-        let origin = ScreenGeometry.toolbarOrigin(
-            for: CGSize(width: 120, height: 40), below: rect, in: CGRect(x: 0, y: 0, width: 1000, height: 800),
-            gap: 8)
+    func barPlacement(rect: CGRect, expected: CGPoint) {
+        let origin = ScreenGeometry.barOrigin(
+            for: CGSize(width: 120, height: 40), under: rect, in: CGRect(x: 0, y: 0, width: 1000, height: 800),
+            gap: 10, inset: 56)
+        #expect(origin == expected)
+    }
+
+    @Test(
+        "puts the tag above the top-left corner, inside at the top edge, and keeps it on screen",
+        arguments: zip(
+            [
+                CGRect(x: 100, y: 300, width: 400, height: 200),
+                CGRect(x: 100, y: 600, width: 400, height: 200),
+                CGRect(x: 950, y: 300, width: 40, height: 40),
+            ],
+            [CGPoint(x: 100, y: 508), CGPoint(x: 108, y: 772), CGPoint(x: 880, y: 348)]))
+    func tagPlacement(rect: CGRect, expected: CGPoint) {
+        let origin = ScreenGeometry.tagOrigin(
+            for: CGSize(width: 120, height: 20), on: rect, in: CGRect(x: 0, y: 0, width: 1000, height: 800), lift: 8)
         #expect(origin == expected)
     }
 

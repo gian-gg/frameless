@@ -22,32 +22,32 @@ final class OverlayView: NSView {
         case window
     }
 
-    private enum Layout {
-        static let hoverBorderWidth: CGFloat = 4
-    }
-
     var onFinish: (@MainActor (CaptureSelection.Target) -> Void)?
     var onCancel: (@MainActor () -> Void)?
     var onToggleMode: (@MainActor () -> Void)?
     var onMouseMoved: (@MainActor () -> Void)?
 
     var isHovered = false {
-        didSet { needsDisplay = true }
+        didSet { refresh() }
     }
     var mode = Mode.screen {
         didSet {
             anchor = nil
             current = nil
-            needsDisplay = true
+            refresh()
         }
     }
     var highlightedWindow: WindowInfo? {
-        didSet { needsDisplay = true }
+        didSet { refresh() }
     }
 
     private let scale: CGFloat
     private let screenOrigin: CGPoint
     private let purpose: CapturePurpose
+    private var bar: GlassBar?
+    private var barMode: Mode?
+    private let sizeTag = GlassTag()
+    private var sizeTagTarget: CGRect?
     private var anchor: CGPoint?
     private var current: CGPoint?
 
@@ -56,6 +56,8 @@ final class OverlayView: NSView {
         self.screenOrigin = screenOrigin
         self.purpose = purpose
         super.init(frame: .zero)
+        sizeTag.isHidden = true
+        addSubview(sizeTag)
     }
 
     @available(*, unavailable)
@@ -99,13 +101,13 @@ final class OverlayView: NSView {
         guard mode == .screen else { return }
         anchor = convert(event.locationInWindow, from: nil)
         current = anchor
-        needsDisplay = true
+        refresh()
     }
 
     override func mouseDragged(with event: NSEvent) {
         guard mode == .screen else { return }
         current = convert(event.locationInWindow, from: nil)
-        needsDisplay = true
+        refresh()
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -126,10 +128,20 @@ final class OverlayView: NSView {
         switch Int(event.keyCode) {
         case kVK_Escape:
             onCancel?()
+        case kVK_Return, kVK_ANSI_KeypadEnter:
+            confirm()
         case kVK_Space where !event.isARepeat:
             onToggleMode?()
         default:
             super.keyDown(with: event)
+        }
+    }
+
+    /// Return: the hovered display, or the highlighted window in window mode.
+    private func confirm() {
+        switch mode {
+        case .screen: onFinish?(.display)
+        case .window: if let highlightedWindow { onFinish?(.window(highlightedWindow.id)) }
         }
     }
 
@@ -140,6 +152,86 @@ final class OverlayView: NSView {
             width: abs(current.x - anchor.x), height: abs(current.y - anchor.y))
         let clamped = rect.intersection(bounds)
         return clamped.isNull || clamped.isEmpty ? nil : clamped
+    }
+
+    // MARK: - Hint bar
+
+    /// Redraws and updates the size tag and the hint bar, shown on the hovered screen while nothing is dragged.
+    private func refresh() {
+        needsDisplay = true
+        needsLayout = true
+        updateTag()
+        let showsBar = isHovered && selection == nil
+        if showsBar, barMode != mode { rebuildBar() }
+        bar?.isHidden = !showsBar
+    }
+
+    /// Rebuilds the bottom bar for the current mode: buttons with their keys, and Cancel.
+    private func rebuildBar() {
+        bar?.removeFromSuperview()
+        let size = ScreenGeometry.evenPixelSize(bounds.size, scale: scale)
+        let display = GlassBar.Item(
+            symbol: Config.Overlay.displaySymbol, title: Config.Overlay.displayButton, shortcut: .text("↩"),
+            toolTip: "\(Config.Overlay.displayTitle(purpose.verb)) (\(size.width) × \(size.height))",
+            perform: { [weak self] in self?.onFinish?(.display) })
+        let items: [GlassBar.Item] =
+            switch mode {
+            case .screen:
+                [
+                    display,
+                    .init(
+                        symbol: Config.Overlay.windowSymbol, title: Config.Overlay.windowHint,
+                        shortcut: .symbol("space"),
+                        toolTip: "Pick a window (Space)", perform: { [weak self] in self?.onToggleMode?() }),
+                ]
+            case .window:
+                [
+                    .init(
+                        symbol: Config.Overlay.dragSymbol, title: Config.Overlay.screenHint, shortcut: .symbol("space"),
+                        toolTip: "Back to display or area (Space)", perform: { [weak self] in self?.onToggleMode?() })
+                ]
+            }
+        let bar = GlassBar(
+            items: items, closeToolTip: "\(Config.Overlay.cancelHint) (Esc)",
+            close: { [weak self] in self?.onCancel?() })
+        addSubview(bar)
+        self.bar = bar
+        barMode = mode
+    }
+
+    /// Shows the pixel size for a drag, or the name and size of the highlighted window.
+    private func updateTag() {
+        if mode == .screen, let rect = selection {
+            let size = ScreenGeometry.evenPixelSize(rect.size, scale: scale)
+            sizeTag.show("\(size.width) × \(size.height)")
+            sizeTagTarget = rect
+        } else if mode == .window, let window = highlightedWindow, let local = visibleFrame(of: window) {
+            let size = ScreenGeometry.evenPixelSize(window.frame.size, scale: scale)
+            sizeTag.show("\(window.displayName)   \(size.width) × \(size.height)")
+            sizeTagTarget = local
+        } else {
+            sizeTagTarget = nil
+        }
+        sizeTag.isHidden = sizeTagTarget == nil
+    }
+
+    private func visibleFrame(of window: WindowInfo) -> CGRect? {
+        let local = window.frame.offsetBy(dx: -screenOrigin.x, dy: -screenOrigin.y).intersection(bounds)
+        return local.isNull || local.isEmpty ? nil : local
+    }
+
+    override func layout() {
+        super.layout()
+        if let bar {
+            bar.setFrameOrigin(
+                CGPoint(
+                    x: (bounds.midX - bar.frame.width / 2).rounded(), y: bounds.minY + Config.Style.barBottomOffset))
+        }
+        if let sizeTagTarget {
+            sizeTag.setFrameOrigin(
+                ScreenGeometry.tagOrigin(
+                    for: sizeTag.frame.size, on: sizeTagTarget, in: bounds, lift: Config.Style.tagLift))
+        }
     }
 
     // MARK: - Drawing
@@ -161,47 +253,27 @@ final class OverlayView: NSView {
     }
 
     private func drawHoveredDisplay() {
-        NSColor.black.withAlphaComponent(Config.Overlay.hoverDimOpacity).setFill()
+        NSColor.black.withAlphaComponent(Config.Style.dimOpacity).setFill()
         bounds.fill()
-
-        let inset = Layout.hoverBorderWidth / 2
-        let border = NSBezierPath(rect: bounds.insetBy(dx: inset, dy: inset))
-        border.lineWidth = Layout.hoverBorderWidth
-        NSColor.white.withAlphaComponent(0.7).setStroke()
-        border.stroke()
-
-        let size = ScreenGeometry.evenPixelSize(bounds.size, scale: scale)
-        HintCard.display(pixelWidth: size.width, pixelHeight: size.height, purpose: purpose).draw(centeredIn: bounds)
     }
 
     private func drawSelection(_ rect: CGRect) {
-        NSColor.black.withAlphaComponent(Config.Overlay.hoverDimOpacity).setFill()
+        NSColor.black.withAlphaComponent(Config.Style.dimOpacity).setFill()
         bounds.fill()
         reveal(rect)
-        let size = ScreenGeometry.evenPixelSize(rect.size, scale: scale)
-        OverlayDrawing.drawLabel("\(size.width) × \(size.height)", above: rect, in: bounds)
     }
 
     private func drawWindowMode() {
-        NSColor.black.withAlphaComponent(Config.Overlay.hoverDimOpacity).setFill()
+        NSColor.black.withAlphaComponent(Config.Style.dimOpacity).setFill()
         bounds.fill()
-
-        guard let highlightedWindow else {
-            if isHovered { HintCard.windowMode(purpose: purpose).draw(centeredIn: bounds) }
-            return
-        }
-        let local = highlightedWindow.frame.offsetBy(dx: -screenOrigin.x, dy: -screenOrigin.y).intersection(bounds)
-        guard !local.isNull, !local.isEmpty else { return }
+        guard let highlightedWindow, let local = visibleFrame(of: highlightedWindow) else { return }
         reveal(local)
-        let size = ScreenGeometry.evenPixelSize(highlightedWindow.frame.size, scale: scale)
-        OverlayDrawing.drawLabel(
-            "\(highlightedWindow.displayName)   \(size.width) × \(size.height)", above: local, in: bounds)
     }
 
-    /// Clears the dim over a rect and outlines it in white on a dark hairline.
+    /// Clears the dim over a rect and frames it with the soft line and round handles.
     private func reveal(_ rect: CGRect) {
         NSColor.clear.setFill()
         rect.fill(using: .copy)
-        OverlayDrawing.strokeSelection(rect)
+        Panel.drawSelectionFrame(rect)
     }
 }

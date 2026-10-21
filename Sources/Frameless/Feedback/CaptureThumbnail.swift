@@ -102,7 +102,7 @@ private final class ThumbnailView: NSView, NSDraggingSource {
         wantsLayer = true
         layer?.contents = image
         layer?.contentsGravity = .resizeAspectFill
-        layer?.cornerRadius = 10
+        layer?.cornerRadius = Config.Style.cornerRadius
         layer?.masksToBounds = true
         layer?.borderWidth = 1
         layer?.borderColor = NSColor.white.withAlphaComponent(0.25).cgColor

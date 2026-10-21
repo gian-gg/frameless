@@ -50,14 +50,27 @@ private final class BeltView: NSView {
 
     private let image: CGImage
     private let imageFrame: CGRect
-    private let toolbar = BeltToolbar()
+    private var toolbar: GlassBar?
+    private let sizeTag = GlassTag()
 
     init(shot: CapturedImage, screenOrigin: CGPoint) {
         image = shot.image
         imageFrame = shot.frame.offsetBy(dx: -screenOrigin.x, dy: -screenOrigin.y)
         super.init(frame: .zero)
-        toolbar.onAction = { [weak self] action in self?.onFinish?(action) }
+        let toolbar = GlassBar(
+            items: [
+                .init(
+                    symbol: "doc.on.doc", title: "Copy", shortcut: .text("⌘C"), toolTip: "Copy to the clipboard",
+                    perform: { [weak self] in self?.onFinish?(.copy) }),
+                .init(
+                    symbol: "square.and.arrow.down", title: "Save", shortcut: .text("⌘S"), toolTip: "Save to Pictures",
+                    perform: { [weak self] in self?.onFinish?(.save) }),
+            ],
+            closeToolTip: "Close (Esc)", close: { [weak self] in self?.onFinish?(nil) })
         addSubview(toolbar)
+        self.toolbar = toolbar
+        sizeTag.show("\(image.width) × \(image.height)")
+        addSubview(sizeTag)
     }
 
     @available(*, unavailable)
@@ -69,20 +82,23 @@ private final class BeltView: NSView {
 
     override func layout() {
         super.layout()
-        let size = BeltToolbar.size
-        let origin = ScreenGeometry.toolbarOrigin(for: size, below: imageFrame, in: bounds, gap: Config.Belt.gap)
-        toolbar.frame = CGRect(origin: origin, size: size)
+        if let toolbar {
+            toolbar.setFrameOrigin(
+                ScreenGeometry.barOrigin(
+                    for: toolbar.frame.size, under: imageFrame, in: bounds, gap: Config.Bar.selectionGap,
+                    inset: Config.Style.barBottomOffset))
+        }
+        sizeTag.setFrameOrigin(
+            ScreenGeometry.tagOrigin(for: sizeTag.frame.size, on: imageFrame, in: bounds, lift: Config.Style.tagLift))
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        NSColor.black.withAlphaComponent(Config.Overlay.hoverDimOpacity).setFill()
+        NSColor.black.withAlphaComponent(Config.Style.dimOpacity).setFill()
         bounds.fill()
         NSColor.clear.setFill()
         imageFrame.fill(using: .copy)
         NSGraphicsContext.current?.cgContext.draw(image, in: imageFrame)
-        OverlayDrawing.strokeSelection(imageFrame)
-        OverlayDrawing.drawLabel(
-            "\(image.width) × \(image.height)", above: imageFrame, in: bounds)
+        Panel.drawSelectionFrame(imageFrame)
     }
 
     override func keyDown(with event: NSEvent) {
@@ -103,67 +119,5 @@ private final class BeltView: NSView {
         default: return super.performKeyEquivalent(with: event)
         }
         return true
-    }
-}
-
-/// Square-cornered bar with Copy and Save, a divider, and Close.
-private final class BeltToolbar: NSView {
-    private struct Item {
-        let symbol: String
-        let tip: String
-        let action: CaptureBelt.Action?
-    }
-
-    private static let actions = [
-        Item(symbol: "doc.on.doc", tip: "Copy (⌘C)", action: .copy),
-        Item(symbol: "square.and.arrow.down", tip: "Save (⌘S)", action: .save),
-    ]
-    private static let close = Item(symbol: "xmark", tip: "Close (Esc)", action: nil)
-
-    static var size: CGSize {
-        let buttons = CGFloat(actions.count + 1) * Config.Belt.buttonSize.width
-        let divider = Config.Belt.separatorGap * 2 + 1
-        return CGSize(
-            width: buttons + divider + Config.Belt.padding * 2,
-            height: Config.Belt.buttonSize.height + Config.Belt.padding * 2)
-    }
-
-    var onAction: (@MainActor (CaptureBelt.Action?) -> Void)?
-
-    private var dividerX: CGFloat = 0
-
-    init() {
-        super.init(frame: .zero)
-        var left = Config.Belt.padding
-        for item in Self.actions {
-            addButton(item, at: left)
-            left += Config.Belt.buttonSize.width
-        }
-        dividerX = left + Config.Belt.separatorGap
-        addButton(Self.close, at: dividerX + 1 + Config.Belt.separatorGap)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { nil }
-
-    private func addButton(_ item: Item, at left: CGFloat) {
-        let button = NSButton(
-            image: OverlayDrawing.symbol(item.symbol, pointSize: Config.Belt.iconSize) ?? NSImage(),
-            target: self, action: #selector(pressed(_:)))
-        button.isBordered = false
-        button.toolTip = item.tip
-        button.tag = Self.actions.firstIndex { $0.symbol == item.symbol } ?? -1
-        button.frame = CGRect(origin: CGPoint(x: left, y: Config.Belt.padding), size: Config.Belt.buttonSize)
-        addSubview(button)
-    }
-
-    @objc private func pressed(_ sender: NSButton) {
-        onAction?(Self.actions.indices.contains(sender.tag) ? Self.actions[sender.tag].action : nil)
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        OverlayDrawing.fillPanel(bounds.insetBy(dx: 0.5, dy: 0.5))
-        NSColor.white.withAlphaComponent(0.15).setFill()
-        CGRect(x: dividerX, y: Config.Belt.padding + 4, width: 1, height: Config.Belt.buttonSize.height - 8).fill()
     }
 }

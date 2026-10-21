@@ -1,4 +1,5 @@
 import AVFoundation
+import AppKit
 import CoreGraphics
 import Foundation
 
@@ -36,38 +37,56 @@ enum Config {
         static let thumbnailFadeDuration: TimeInterval = 0.2
     }
 
-    /// Shared look for every panel: picker card, labels, key caps and the belt.
+    /// The shared look: corners, dims, panels and fades used across the picker, belt and thumbnail.
     enum Style {
-        static let cornerRadius: CGFloat = 0
+        /// Rounding for non-capsule surfaces such as the thumbnail; bars and tags are full capsules.
+        static let cornerRadius: CGFloat = 12
+        /// Dim over the screen around the active display, selection or capture.
+        static let dimOpacity: CGFloat = 0.3
+        static let hairlineOpacity: CGFloat = 0.14
+        /// Dark tint on Liquid Glass so busy content behind it doesn't compete with its labels.
+        static let glassTintOpacity: CGFloat = 0.35
+        static let handleSize: CGFloat = 9
+        static let tagPadding = CGSize(width: 10, height: 4)
+        /// Gap between a selection's top edge and its size tag.
+        static let tagLift: CGFloat = 8
+        static let fadeDuration: TimeInterval = 0.12
+        /// Distance from the screen's bottom edge to the hint bar and the belt.
+        static let barBottomOffset: CGFloat = 56
     }
 
-    /// Copy / Save toolbar shown after a screenshot.
-    enum Belt {
-        static let gap: CGFloat = 8
-        static let buttonSize = CGSize(width: 34, height: 28)
+    /// Glass bars at the bottom of the screen: the picker's and the belt's.
+    enum Bar {
+        /// Height of one item; the capsule adds `padding` around it.
+        static let itemHeight: CGFloat = 26
+        /// Space inside an item on each side of its content.
+        static let itemPadding: CGFloat = 10
+        /// Space between an item's icon, label and shortcut.
+        static let innerGap: CGFloat = 6
         static let padding: CGFloat = 4
-        static let separatorGap: CGFloat = 6
-        static let iconSize: CGFloat = 14
+        /// Space between the capsule and the round close button.
+        static let closeGap: CGFloat = 8
+        /// Space between a capture and the belt under it.
+        static let selectionGap: CGFloat = 10
+        static let iconSize: CGFloat = 12
+        static let titleSize: CGFloat = 12
+        static let shortcutSize: CGFloat = 11
     }
 
     /// Display and area picker.
     enum Overlay {
         static func displayTitle(_ verb: String) -> String { "Click to \(verb) this display" }
-        static func dragHint(_ verb: String) -> String { "Drag to \(verb) an area" }
         static let cancelHint = "Cancel"
         static let windowHint = "Window"
-        static func windowTitle(_ verb: String) -> String { "Click a window to \(verb) it" }
+        static let displayButton = "Display"
         static let screenHint = "Display or area"
         static let windowSymbol = "macwindow"
         static let windowLabelLength = 48
         static let displaySymbol = "display"
         static let dragSymbol = "rectangle.dashed"
-        static let hoverDimOpacity: CGFloat = 0.25
         static let idleDimOpacity: CGFloat = 0.5
-        static let panelOpacity: CGFloat = 0.75
         static let minimumDrag: CGFloat = 4
         static let minimumWindowSize: CGFloat = 40
-        static let fadeDuration: TimeInterval = 0.12
     }
 
     /// Viewfinder around a recorded area.

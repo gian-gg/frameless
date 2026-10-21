@@ -20,17 +20,27 @@ enum ScreenGeometry {
         return CaptureArea(sourceRect: sourceRect, width: size.width, height: size.height)
     }
 
-    /// Where a toolbar goes for a rect: centred below it, else above, else inside at the bottom; kept on screen.
-    static func toolbarOrigin(for size: CGSize, below rect: CGRect, in bounds: CGRect, gap: CGFloat) -> CGPoint {
+    /// Where a bar goes for a rect: centred `gap` under it, or `inset` inside its bottom when there's no room;
+    /// kept on screen.
+    static func barOrigin(
+        for size: CGSize, under rect: CGRect, in bounds: CGRect, gap: CGFloat, inset: CGFloat
+    ) -> CGPoint {
         var top = rect.minY - gap - size.height
-        if top < bounds.minY {
-            top = rect.maxY + gap
-            if top + size.height > bounds.maxY {
-                top = max(rect.minY, bounds.minY) + gap
-            }
+        if top < bounds.minY + gap {
+            top = max(rect.minY, bounds.minY) + inset
         }
         let left = min(max(rect.midX - size.width / 2, bounds.minX + gap), bounds.maxX - gap - size.width)
-        return CGPoint(x: left, y: top)
+        return CGPoint(x: left.rounded(), y: top.rounded())
+    }
+
+    /// Where a tag sits for a rect: above its top-left corner, or tucked inside when that would leave the screen.
+    static func tagOrigin(for size: CGSize, on rect: CGRect, in bounds: CGRect, lift: CGFloat) -> CGPoint {
+        var origin = CGPoint(x: rect.minX, y: rect.maxY + lift)
+        if origin.y + size.height > bounds.maxY {
+            origin = CGPoint(x: rect.minX + lift, y: rect.maxY - size.height - lift)
+        }
+        origin.x = min(max(origin.x, bounds.minX), bounds.maxX - size.width)
+        return CGPoint(x: origin.x.rounded(), y: origin.y.rounded())
     }
 
     /// A window's frame relative to a display, clipped to it; both in Core Graphics global points.

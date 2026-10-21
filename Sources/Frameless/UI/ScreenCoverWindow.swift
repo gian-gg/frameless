@@ -22,7 +22,7 @@ class ScreenCoverWindow: NSWindow {
         alphaValue = 0
         orderFrontRegardless()
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = Config.Overlay.fadeDuration
+            context.duration = Config.Style.fadeDuration
             animator().alphaValue = 1
         }
     }
