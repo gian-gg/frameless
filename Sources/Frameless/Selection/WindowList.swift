@@ -7,6 +7,13 @@ struct WindowInfo: Equatable, Sendable {
     let appName: String
     let title: String
     let frame: CGRect
+
+    /// "App — Title", shortened for the overlay label.
+    var displayName: String {
+        let name = title.isEmpty ? appName : "\(appName) — \(title)"
+        let limit = Config.Overlay.windowLabelLength
+        return name.count > limit ? String(name.prefix(limit - 1)) + "…" : name
+    }
 }
 
 /// Front-to-back snapshot of normal app windows, for picking one to record.

@@ -36,9 +36,19 @@ enum OverlayDrawing {
     }
 }
 
-/// Centred card on the hovered display: icon, title, pixel size and gesture hints.
+/// Centred card on the hovered display: icon, title, optional detail line and key hints.
 @MainActor
-struct DisplayHintCard {
+struct HintCard {
+    enum Glyph {
+        case symbol(String)
+        case key(String)
+    }
+
+    struct Hint {
+        let glyph: Glyph
+        let label: String
+    }
+
     private enum Layout {
         static let padding = CGSize(width: 22, height: 16)
         static let cornerRadius: CGFloat = 14
@@ -50,42 +60,67 @@ struct DisplayHintCard {
         static let keyPadding = CGSize(width: 8, height: 2)
     }
 
-    private enum Glyph {
+    private enum RenderedGlyph {
         case symbol(NSImage?)
         case key(NSAttributedString)
     }
 
-    private struct Hint {
-        let glyph: Glyph
+    private struct RenderedHint {
+        let glyph: RenderedGlyph
         let label: NSAttributedString
     }
 
     private let icon: NSImage?
     private let title: NSAttributedString
-    private let pixelSize: NSAttributedString
-    private let hints: [Hint]
+    private let detail: NSAttributedString?
+    private let hints: [RenderedHint]
 
-    init(pixelWidth: Int, pixelHeight: Int) {
-        icon = OverlayDrawing.symbol(Config.Overlay.displaySymbol, pointSize: 30, weight: .light)
-        title = OverlayDrawing.text(Config.Overlay.displayTitle, size: 15, weight: .semibold)
-        pixelSize = OverlayDrawing.text(
-            "\(pixelWidth) × \(pixelHeight)", size: 12, weight: .regular, monospaced: true, alpha: 0.6)
-        hints = [
-            Hint(
-                glyph: .symbol(OverlayDrawing.symbol(Config.Overlay.dragSymbol, pointSize: 13, alpha: 0.8)),
-                label: OverlayDrawing.text(Config.Overlay.dragHint, size: 12, weight: .regular, alpha: 0.8)),
-            Hint(
-                glyph: .key(OverlayDrawing.text("esc", size: 10, weight: .semibold, alpha: 0.8)),
-                label: OverlayDrawing.text(Config.Overlay.cancelHint, size: 12, weight: .regular, alpha: 0.8)),
-        ]
+    init(iconSymbol: String, title: String, detail: String?, hints: [Hint]) {
+        icon = OverlayDrawing.symbol(iconSymbol, pointSize: 30, weight: .light)
+        self.title = OverlayDrawing.text(title, size: 15, weight: .semibold)
+        self.detail = detail.map {
+            OverlayDrawing.text($0, size: 12, weight: .regular, monospaced: true, alpha: 0.6)
+        }
+        self.hints = hints.map { hint in
+            let glyph: RenderedGlyph =
+                switch hint.glyph {
+                case .symbol(let name): .symbol(OverlayDrawing.symbol(name, pointSize: 13, alpha: 0.8))
+                case .key(let key): .key(OverlayDrawing.text(key, size: 10, weight: .semibold, alpha: 0.8))
+                }
+            return RenderedHint(
+                glyph: glyph, label: OverlayDrawing.text(hint.label, size: 12, weight: .regular, alpha: 0.8))
+        }
+    }
+
+    /// The hovered display: click to record it, drag for an area, space for a window.
+    static func display(pixelWidth: Int, pixelHeight: Int) -> HintCard {
+        HintCard(
+            iconSymbol: Config.Overlay.displaySymbol, title: Config.Overlay.displayTitle,
+            detail: "\(pixelWidth) × \(pixelHeight)",
+            hints: [
+                Hint(glyph: .symbol(Config.Overlay.dragSymbol), label: Config.Overlay.dragHint),
+                Hint(glyph: .key("space"), label: Config.Overlay.windowHint),
+                Hint(glyph: .key("esc"), label: Config.Overlay.cancelHint),
+            ])
+    }
+
+    /// Window mode with no window under the cursor.
+    static func windowMode() -> HintCard {
+        HintCard(
+            iconSymbol: Config.Overlay.windowSymbol, title: Config.Overlay.windowTitle, detail: nil,
+            hints: [
+                Hint(glyph: .key("space"), label: Config.Overlay.screenHint),
+                Hint(glyph: .key("esc"), label: Config.Overlay.cancelHint),
+            ])
     }
 
     func draw(centeredIn bounds: CGRect) {
         let iconSize = icon?.size ?? .zero
         let row = hintRowSize()
-        let contentWidth = max(title.size().width, pixelSize.size().width, row.width)
+        let detailHeight = detail.map { Layout.sizeGap + $0.size().height } ?? 0
+        let contentWidth = max(title.size().width, detail?.size().width ?? 0, row.width)
         let contentHeight =
-            iconSize.height + Layout.iconGap + title.size().height + Layout.sizeGap + pixelSize.size().height
+            iconSize.height + Layout.iconGap + title.size().height + detailHeight
             + Layout.dividerGap * 2 + 1 + row.height
         let card = CGRect(
             x: bounds.midX - contentWidth / 2 - Layout.padding.width,
@@ -101,7 +136,9 @@ struct DisplayHintCard {
             icon.draw(in: CGRect(origin: CGPoint(x: card.midX - iconSize.width / 2, y: top), size: iconSize))
         }
         top = drawCentered(title, below: top - Layout.iconGap, centerX: card.midX)
-        top = drawCentered(pixelSize, below: top - Layout.sizeGap, centerX: card.midX)
+        if let detail {
+            top = drawCentered(detail, below: top - Layout.sizeGap, centerX: card.midX)
+        }
 
         top -= Layout.dividerGap
         NSColor.white.withAlphaComponent(0.12).setFill()
@@ -118,7 +155,7 @@ struct DisplayHintCard {
         return top - size.height
     }
 
-    private func glyphSize(_ glyph: Glyph) -> CGSize {
+    private func glyphSize(_ glyph: RenderedGlyph) -> CGSize {
         switch glyph {
         case .symbol(let image):
             return image?.size ?? .zero
@@ -150,7 +187,7 @@ struct DisplayHintCard {
         }
     }
 
-    private func drawGlyph(_ glyph: Glyph, in frame: CGRect) {
+    private func drawGlyph(_ glyph: RenderedGlyph, in frame: CGRect) {
         switch glyph {
         case .symbol(let image):
             image?.draw(in: frame)

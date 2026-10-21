@@ -27,6 +27,11 @@ enum Config {
         static let displayTitle = "Click to record this display"
         static let dragHint = "Drag to record an area"
         static let cancelHint = "Cancel"
+        static let windowHint = "Window"
+        static let windowTitle = "Click a window to record it"
+        static let screenHint = "Display or area"
+        static let windowSymbol = "macwindow"
+        static let windowLabelLength = 48
         static let displaySymbol = "display"
         static let dragSymbol = "rectangle.dashed"
         static let hoverDimOpacity: CGFloat = 0.25

@@ -6,6 +6,7 @@ struct CaptureSelection: Equatable {
         case display
         /// An area in the screen's local AppKit points.
         case area(CGRect)
+        case window(CGWindowID)
     }
 
     let displayID: CGDirectDisplayID
@@ -18,10 +19,12 @@ struct CaptureSelection: Equatable {
     }
 }
 
-/// Full-screen overlay that lets the user pick a display or region.
+/// Full-screen overlay that lets the user pick a display, an area or a window.
 @MainActor
 final class AreaSelector {
     private var windows: [OverlayWindow] = []
+    private var windowList = WindowList(windows: [])
+    private var mode = OverlayView.Mode.screen
     private var continuation: CheckedContinuation<CaptureSelection?, Never>?
 
     /// Shows the overlay on every display; nil when cancelled.
@@ -34,15 +37,18 @@ final class AreaSelector {
     }
 
     private func showOverlays() {
+        windowList = WindowList.snapshot()
+        mode = .screen
         windows = NSScreen.screens.compactMap { screen in
             guard let displayID = screen.displayID else { return nil }
             let frame = screen.frame
             let window = OverlayWindow(screen: screen)
-            window.overlay.onFinish = { [weak self] area in
-                let target = area.map(CaptureSelection.Target.area) ?? .display
+            window.overlay.onFinish = { [weak self] target in
                 self?.finish(CaptureSelection(displayID: displayID, screenFrame: frame, target: target))
             }
             window.overlay.onCancel = { [weak self] in self?.finish(nil) }
+            window.overlay.onToggleMode = { [weak self] in self?.toggleMode() }
+            window.overlay.onMouseMoved = { [weak self] in self?.updateHighlightedWindow() }
             return window
         }
         guard !windows.isEmpty else { return finish(nil) }
@@ -53,6 +59,20 @@ final class AreaSelector {
         hovered.overlay.isHovered = true
         for window in windows { window.fadeIn() }
         hovered.makeKey()
+    }
+
+    private func toggleMode() {
+        mode = mode == .screen ? .window : .screen
+        for window in windows { window.overlay.mode = mode }
+        updateHighlightedWindow()
+    }
+
+    /// Highlights the window under the cursor on every screen it spans.
+    private func updateHighlightedWindow() {
+        let highlighted = mode == .window ? windowList.window(at: NSEvent.mouseLocation) : nil
+        for window in windows where window.overlay.highlightedWindow != highlighted {
+            window.overlay.highlightedWindow = highlighted
+        }
     }
 
     private func finish(_ selection: CaptureSelection?) {

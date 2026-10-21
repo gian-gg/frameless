@@ -1,11 +1,20 @@
 import ScreenCaptureKit
 
-/// Records a display or an area of it, with system audio, to disk via SCRecordingOutput.
+/// Records a display, an area of it, or a single window, with audio, to disk via SCRecordingOutput.
 @MainActor
 final class Recorder: NSObject {
-    enum RecorderError: Error {
+    enum RecorderError: LocalizedError {
         case noDisplay
+        case noWindow
         case notRecording
+
+        var errorDescription: String? {
+            switch self {
+            case .noDisplay: "That display is no longer connected."
+            case .noWindow: "That window is no longer open."
+            case .notRecording: "Nothing is being recorded."
+            }
+        }
     }
 
     var onUnexpectedStop: (@MainActor (Error) -> Void)?
@@ -18,11 +27,7 @@ final class Recorder: NSObject {
 
     func start(_ selection: CaptureSelection, options: RecordingOptions, to url: URL) async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-        guard let display = content.displays.first(where: { $0.displayID == selection.displayID }) else {
-            throw RecorderError.noDisplay
-        }
-        let ownApps = content.applications.filter { $0.bundleIdentifier == Bundle.main.bundleIdentifier }
-        let filter = SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: [])
+        let filter = try Self.filter(for: selection, in: content)
         let config = Self.configuration(for: filter, area: selection.area, options: options)
 
         let stream = SCStream(filter: filter, configuration: config, delegate: self)
@@ -48,6 +53,23 @@ final class Recorder: NSObject {
         try await stream.stopCapture()
         try await waitForFinish()
         return outputURL
+    }
+
+    /// A single-window filter, or the selection's display minus Frameless's own windows.
+    private static func filter(
+        for selection: CaptureSelection, in content: SCShareableContent
+    ) throws -> SCContentFilter {
+        if case .window(let windowID) = selection.target {
+            guard let window = content.windows.first(where: { $0.windowID == windowID }) else {
+                throw RecorderError.noWindow
+            }
+            return SCContentFilter(desktopIndependentWindow: window)
+        }
+        guard let display = content.displays.first(where: { $0.displayID == selection.displayID }) else {
+            throw RecorderError.noDisplay
+        }
+        let ownApps = content.applications.filter { $0.bundleIdentifier == Bundle.main.bundleIdentifier }
+        return SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: [])
     }
 
     private static func configuration(

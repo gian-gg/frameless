@@ -45,6 +45,16 @@ struct WindowListTests {
         #expect(list.windows.map(\.id) == [5])
     }
 
+    @Test("label joins app and title and shortens long names")
+    func displayName() {
+        let frame = CGRect(x: 0, y: 0, width: 100, height: 100)
+        #expect(WindowInfo(id: 1, appName: "Finder", title: "", frame: frame).displayName == "Finder")
+        #expect(WindowInfo(id: 1, appName: "Safari", title: "Docs", frame: frame).displayName == "Safari — Docs")
+        let long = WindowInfo(id: 1, appName: "Safari", title: String(repeating: "x", count: 100), frame: frame)
+        #expect(long.displayName.count == Config.Overlay.windowLabelLength)
+        #expect(long.displayName.hasSuffix("…"))
+    }
+
     @Test("picks the frontmost window under the point")
     func picksFrontmost() {
         let front = WindowInfo(id: 1, appName: "A", title: "", frame: CGRect(x: 0, y: 0, width: 100, height: 100))
