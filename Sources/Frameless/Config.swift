@@ -36,6 +36,11 @@ enum Config {
         static let thumbnailFadeDuration: TimeInterval = 0.2
     }
 
+    /// Shared look for every panel: picker card, labels, key caps and the belt.
+    enum Style {
+        static let cornerRadius: CGFloat = 0
+    }
+
     /// Copy / Save toolbar shown after a screenshot.
     enum Belt {
         static let gap: CGFloat = 8
@@ -43,7 +48,6 @@ enum Config {
         static let padding: CGFloat = 4
         static let separatorGap: CGFloat = 6
         static let iconSize: CGFloat = 14
-        static let cornerRadius: CGFloat = 0
     }
 
     /// Display and area picker.
@@ -60,7 +64,7 @@ enum Config {
         static let dragSymbol = "rectangle.dashed"
         static let hoverDimOpacity: CGFloat = 0.25
         static let idleDimOpacity: CGFloat = 0.5
-        static let pillOpacity: CGFloat = 0.75
+        static let panelOpacity: CGFloat = 0.75
         static let minimumDrag: CGFloat = 4
         static let minimumWindowSize: CGFloat = 40
         static let fadeDuration: TimeInterval = 0.12

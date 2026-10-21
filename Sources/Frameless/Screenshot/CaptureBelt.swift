@@ -82,7 +82,7 @@ private final class BeltView: NSView {
         NSGraphicsContext.current?.cgContext.draw(image, in: imageFrame)
         OverlayDrawing.strokeSelection(imageFrame)
         OverlayDrawing.drawLabel(
-            "\(image.width) × \(image.height)", above: imageFrame, in: bounds, radius: Config.Belt.cornerRadius)
+            "\(image.width) × \(image.height)", above: imageFrame, in: bounds)
     }
 
     override func keyDown(with event: NSEvent) {
@@ -162,7 +162,7 @@ private final class BeltToolbar: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        OverlayDrawing.fillPill(bounds.insetBy(dx: 0.5, dy: 0.5), radius: Config.Belt.cornerRadius)
+        OverlayDrawing.fillPanel(bounds.insetBy(dx: 0.5, dy: 0.5))
         NSColor.white.withAlphaComponent(0.15).setFill()
         CGRect(x: dividerX, y: Config.Belt.padding + 4, width: 1, height: Config.Belt.buttonSize.height - 8).fill()
     }

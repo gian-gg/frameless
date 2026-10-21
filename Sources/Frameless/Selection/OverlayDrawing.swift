@@ -1,10 +1,8 @@
 import AppKit
 
-/// Shared text, symbol and pill drawing for the selection overlay.
+/// Shared text, symbol and panel drawing for the picker and the belt.
 @MainActor
 enum OverlayDrawing {
-    static let pillRadius: CGFloat = 10
-
     static func text(
         _ string: String, size: CGFloat, weight: NSFont.Weight, monospaced: Bool = false, alpha: CGFloat = 1
     ) -> NSAttributedString {
@@ -41,26 +39,27 @@ enum OverlayDrawing {
     private static let labelGap: CGFloat = 6
 
     /// Draws a label above a rect's top-left corner, or inside it at the top edge of the screen.
-    static func drawLabel(_ string: String, above rect: CGRect, in bounds: CGRect, radius: CGFloat = pillRadius) {
+    static func drawLabel(_ string: String, above rect: CGRect, in bounds: CGRect) {
         let label = text(string, size: 12, weight: .medium, monospaced: true)
         let textSize = label.size()
-        let pill = CGSize(
+        let panel = CGSize(
             width: ceil(textSize.width) + labelPadding.width * 2,
             height: ceil(textSize.height) + labelPadding.height * 2)
         var origin = CGPoint(x: rect.minX, y: rect.maxY + labelGap)
-        if origin.y + pill.height > bounds.maxY {
-            origin.y = rect.maxY - pill.height - labelGap
+        if origin.y + panel.height > bounds.maxY {
+            origin.y = rect.maxY - panel.height - labelGap
             origin.x += labelGap
         }
-        origin.x = min(max(origin.x, bounds.minX), bounds.maxX - pill.width)
-        fillPill(CGRect(origin: origin, size: pill), radius: radius)
+        origin.x = min(max(origin.x, bounds.minX), bounds.maxX - panel.width)
+        fillPanel(CGRect(origin: origin, size: panel))
         label.draw(at: CGPoint(x: origin.x + labelPadding.width, y: origin.y + labelPadding.height))
     }
 
-    /// Dark translucent rounded background with a hairline edge.
-    static func fillPill(_ frame: CGRect, radius: CGFloat = pillRadius) {
+    /// Dark translucent panel with a hairline edge, cornered by `Config.Style.cornerRadius`.
+    static func fillPanel(_ frame: CGRect) {
+        let radius = Config.Style.cornerRadius
         let shape = NSBezierPath(roundedRect: frame, xRadius: radius, yRadius: radius)
-        NSColor.black.withAlphaComponent(Config.Overlay.pillOpacity).setFill()
+        NSColor.black.withAlphaComponent(Config.Overlay.panelOpacity).setFill()
         shape.fill()
         NSColor.white.withAlphaComponent(0.12).setStroke()
         shape.lineWidth = 1
@@ -83,7 +82,6 @@ struct HintCard {
 
     private enum Layout {
         static let padding = CGSize(width: 22, height: 16)
-        static let cornerRadius: CGFloat = 14
         static let iconGap: CGFloat = 8
         static let sizeGap: CGFloat = 2
         static let dividerGap: CGFloat = 12
@@ -160,7 +158,7 @@ struct HintCard {
             width: contentWidth + Layout.padding.width * 2,
             height: contentHeight + Layout.padding.height * 2
         ).integral
-        OverlayDrawing.fillPill(card, radius: Layout.cornerRadius)
+        OverlayDrawing.fillPanel(card)
 
         var top = card.maxY - Layout.padding.height
         if let icon {
@@ -224,7 +222,9 @@ struct HintCard {
         case .symbol(let image):
             image?.draw(in: frame)
         case .key(let text):
-            let box = NSBezierPath(roundedRect: frame.insetBy(dx: 0.5, dy: 0.5), xRadius: 4, yRadius: 4)
+            let box = NSBezierPath(
+                roundedRect: frame.insetBy(dx: 0.5, dy: 0.5), xRadius: Config.Style.cornerRadius,
+                yRadius: Config.Style.cornerRadius)
             box.lineWidth = 1
             NSColor.white.withAlphaComponent(0.5).setStroke()
             box.stroke()
