@@ -31,11 +31,10 @@ enum CaptureSource {
         return SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: [])
     }
 
-    /// A window cut from the display it's mostly on; `rect` is relative to `displayFrame`, both Core Graphics points.
+    /// A window cut from the display it's mostly on; `rect` is relative to that display, in Core Graphics points.
     struct WindowCapture {
         let filter: SCContentFilter
         let rect: CGRect
-        let displayFrame: CGRect
     }
 
     /// Just the window, cut from the display it's mostly on, for still images: exact size, no shadow.
@@ -51,7 +50,7 @@ enum CaptureSource {
             throw CaptureError.noDisplay
         }
         return WindowCapture(
-            filter: SCContentFilter(display: display, including: [window]), rect: rect, displayFrame: display.frame)
+            filter: SCContentFilter(display: display, including: [window]), rect: rect)
     }
 
     private static func overlapArea(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {

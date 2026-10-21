@@ -7,8 +7,6 @@ struct CapturedImage {
     let image: CGImage
     /// Pixels per point of the display it came from.
     let scale: CGFloat
-    /// Where it was on screen, in global AppKit points.
-    let frame: CGRect
     let displayID: CGDirectDisplayID
 }
 
@@ -25,7 +23,6 @@ enum Screenshotter {
     static func captureImage(_ selection: CaptureSelection) async throws -> CapturedImage {
         let config = SCStreamConfiguration()
         let filter: SCContentFilter
-        let frame: CGRect
         if case .window(let windowID) = selection.target {
             let window = try await CaptureSource.windowOnDisplay(windowID)
             filter = window.filter
@@ -33,21 +30,15 @@ enum Screenshotter {
             config.sourceRect = window.rect
             config.width = Int((window.rect.width * scale).rounded())
             config.height = Int((window.rect.height * scale).rounded())
-            frame = ScreenGeometry.appKitRect(
-                fromCG: window.rect.offsetBy(dx: window.displayFrame.minX, dy: window.displayFrame.minY),
-                primaryScreenHeight: CGDisplayBounds(CGMainDisplayID()).height)
         } else {
             filter = try await CaptureSource.filter(for: selection)
             CaptureSource.applyRegion(of: filter, area: selection.area, to: config)
-            let origin = selection.screenFrame.origin
-            frame = selection.area?.offsetBy(dx: origin.x, dy: origin.y) ?? selection.screenFrame
         }
         config.captureResolution = .best
         config.showsCursor = false
 
         let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
-        return CapturedImage(
-            image: image, scale: CGFloat(filter.pointPixelScale), frame: frame, displayID: selection.displayID)
+        return CapturedImage(image: image, scale: CGFloat(filter.pointPixelScale), displayID: selection.displayID)
     }
 
     /// Writes the capture as a PNG into `<base>/Frameless`, `~/Pictures/Frameless` by default.

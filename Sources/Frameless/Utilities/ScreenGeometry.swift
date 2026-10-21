@@ -20,6 +20,60 @@ enum ScreenGeometry {
         return CaptureArea(sourceRect: sourceRect, width: size.width, height: size.height)
     }
 
+    /// Which part of a selection a drag grabs: a corner, an edge, or the inside to move it.
+    enum ResizeHandle: Equatable, CaseIterable {
+        case topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left, move
+    }
+
+    /// The handle under a point: corners first, then edges, then the inside; nil outside the rect.
+    static func handle(at point: CGPoint, of rect: CGRect, tolerance: CGFloat) -> ResizeHandle? {
+        let nearLeft = abs(point.x - rect.minX) <= tolerance
+        let nearRight = abs(point.x - rect.maxX) <= tolerance
+        let nearBottom = abs(point.y - rect.minY) <= tolerance
+        let nearTop = abs(point.y - rect.maxY) <= tolerance
+        let withinX = point.x >= rect.minX - tolerance && point.x <= rect.maxX + tolerance
+        let withinY = point.y >= rect.minY - tolerance && point.y <= rect.maxY + tolerance
+        switch (nearLeft, nearRight, nearBottom, nearTop) {
+        case (true, _, _, true): return .topLeft
+        case (_, true, _, true): return .topRight
+        case (true, _, true, _): return .bottomLeft
+        case (_, true, true, _): return .bottomRight
+        case (true, _, _, _) where withinY: return .left
+        case (_, true, _, _) where withinY: return .right
+        case (_, _, true, _) where withinX: return .bottom
+        case (_, _, _, true) where withinX: return .top
+        default: return rect.contains(point) ? .move : nil
+        }
+    }
+
+    /// Applies a drag to a rect through a handle (AppKit, y up), keeping it at least `minimum` and inside `bounds`.
+    static func resize(
+        _ rect: CGRect, with handle: ResizeHandle, by delta: CGVector, in bounds: CGRect, minimum: CGFloat
+    ) -> CGRect {
+        if handle == .move {
+            let left = min(max(rect.minX + delta.dx, bounds.minX), bounds.maxX - rect.width)
+            let bottom = min(max(rect.minY + delta.dy, bounds.minY), bounds.maxY - rect.height)
+            return CGRect(x: left, y: bottom, width: rect.width, height: rect.height)
+        }
+        var minX = rect.minX
+        var maxX = rect.maxX
+        var minY = rect.minY
+        var maxY = rect.maxY
+        if [.left, .topLeft, .bottomLeft].contains(handle) {
+            minX = min(max(minX + delta.dx, bounds.minX), maxX - minimum)
+        }
+        if [.right, .topRight, .bottomRight].contains(handle) {
+            maxX = max(min(maxX + delta.dx, bounds.maxX), minX + minimum)
+        }
+        if [.bottom, .bottomLeft, .bottomRight].contains(handle) {
+            minY = min(max(minY + delta.dy, bounds.minY), maxY - minimum)
+        }
+        if [.top, .topLeft, .topRight].contains(handle) {
+            maxY = max(min(maxY + delta.dy, bounds.maxY), minY + minimum)
+        }
+        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+
     /// Where a bar goes for a rect: centred `gap` under it, or `inset` inside its bottom when there's no room;
     /// kept on screen.
     static func barOrigin(

@@ -28,6 +28,45 @@ struct ScreenGeometryTests {
     }
 
     @Test(
+        "finds the handle under the pointer: corners, edges, inside, or nothing",
+        arguments: zip(
+            [
+                CGPoint(x: 100, y: 500), CGPoint(x: 502, y: 298), CGPoint(x: 300, y: 503), CGPoint(x: 97, y: 400),
+                CGPoint(x: 300, y: 400), CGPoint(x: 700, y: 400),
+            ],
+            [ScreenGeometry.ResizeHandle.topLeft, .bottomRight, .top, .left, .move, nil]))
+    func handleAtPoint(point: CGPoint, expected: ScreenGeometry.ResizeHandle?) {
+        let rect = CGRect(x: 100, y: 300, width: 400, height: 200)
+        #expect(ScreenGeometry.handle(at: point, of: rect, tolerance: 6) == expected)
+    }
+
+    @Test("resizes from an edge or corner and moves from the inside")
+    func resizesAndMoves() {
+        let rect = CGRect(x: 100, y: 300, width: 400, height: 200)
+        let bounds = CGRect(x: 0, y: 0, width: 1000, height: 800)
+        let resize = { (handle: ScreenGeometry.ResizeHandle, deltaX: CGFloat, deltaY: CGFloat) in
+            ScreenGeometry.resize(rect, with: handle, by: CGVector(dx: deltaX, dy: deltaY), in: bounds, minimum: 10)
+        }
+        #expect(resize(.right, 50, 99) == CGRect(x: 100, y: 300, width: 450, height: 200))
+        #expect(resize(.topLeft, -20, 30) == CGRect(x: 80, y: 300, width: 420, height: 230))
+        #expect(resize(.bottom, 0, 40) == CGRect(x: 100, y: 340, width: 400, height: 160))
+        #expect(resize(.move, 25, -10) == CGRect(x: 125, y: 290, width: 400, height: 200))
+    }
+
+    @Test("keeps a resized selection at least the minimum size and on screen")
+    func clampsResize() {
+        let rect = CGRect(x: 100, y: 300, width: 400, height: 200)
+        let bounds = CGRect(x: 0, y: 0, width: 1000, height: 800)
+        let shrunk = ScreenGeometry.resize(rect, with: .left, by: CGVector(dx: 900, dy: 0), in: bounds, minimum: 10)
+        #expect(shrunk == CGRect(x: 490, y: 300, width: 10, height: 200))
+        let grown = ScreenGeometry.resize(
+            rect, with: .topRight, by: CGVector(dx: 900, dy: 900), in: bounds, minimum: 10)
+        #expect(grown == CGRect(x: 100, y: 300, width: 900, height: 500))
+        let moved = ScreenGeometry.resize(rect, with: .move, by: CGVector(dx: -500, dy: 0), in: bounds, minimum: 10)
+        #expect(moved == CGRect(x: 0, y: 300, width: 400, height: 200))
+    }
+
+    @Test(
         "centres the bar under the capture, inside its bottom when there's no room, and keeps it on screen",
         arguments: zip(
             [

@@ -32,9 +32,7 @@ struct ScreenshotterTests {
             CGContext(
                 data: nil, width: 4, height: 2, bitsPerComponent: 8, bytesPerRow: 0,
                 space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
-        let shot = CapturedImage(
-            image: try #require(context.makeImage()), scale: 1, frame: CGRect(x: 0, y: 0, width: 4, height: 2),
-            displayID: 1)
+        let shot = CapturedImage(image: try #require(context.makeImage()), scale: 1, displayID: 1)
         let base = FileManager.default.temporaryDirectory.appending(path: "ScreenshotterTests.\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: base) }
 

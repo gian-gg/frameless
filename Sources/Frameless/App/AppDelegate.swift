@@ -272,18 +272,19 @@ extension AppDelegate {
             defer { showIdle() }
             guard let selection = await selector.select(for: .screenshot) else { return }
             defer { selector.dismiss() }
+            guard let choice = await belt.present(selection, onShown: { [selector] in selector.dismiss() }) else {
+                return
+            }
             do {
-                let shot = try await Screenshotter.captureImage(selection)
-                switch await belt.present(shot, onShown: { [selector] in selector.dismiss() }) {
+                let shot = try await Screenshotter.captureImage(choice.selection)
+                switch choice.action {
                 case .copy:
                     Screenshotter.copy(shot)
                     playSound(.screenshot)
                 case .save:
                     let url = try Screenshotter.save(shot)
                     playSound(.screenshot)
-                    thumbnail.show(url, on: NSScreen.screens.first { $0.displayID == selection.displayID })
-                case nil:
-                    break
+                    thumbnail.show(url, on: NSScreen.screens.first { $0.displayID == shot.displayID })
                 }
             } catch let error as SCStreamError where error.code == .userDeclined {
                 selector.dismiss()

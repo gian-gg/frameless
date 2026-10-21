@@ -1,7 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Keeps a screenshot frozen in place with a small Copy / Save / Close toolbar until one is chosen.
+/// After picking, keeps the selection on screen to resize or move, with Copy / Save / Close; nothing is captured yet.
 @MainActor
 final class CaptureBelt {
     enum Action {
@@ -9,25 +9,31 @@ final class CaptureBelt {
         case save
     }
 
-    private var window: ScreenCoverWindow?
-    private var continuation: CheckedContinuation<Action?, Never>?
+    /// The chosen action and the selection as it was when it was chosen.
+    struct Choice {
+        let action: Action
+        let selection: CaptureSelection
+    }
 
-    /// Shows the capture on its screen, calls `onShown` once it's up; returns the chosen action, or nil when closed.
-    func present(_ shot: CapturedImage, onShown: @MainActor () -> Void = {}) async -> Action? {
+    private var window: ScreenCoverWindow?
+    private var continuation: CheckedContinuation<Choice?, Never>?
+
+    /// Shows the selection on its screen, calls `onShown` once it's up; returns the choice, or nil when closed.
+    func present(_ selection: CaptureSelection, onShown: @MainActor () -> Void = {}) async -> Choice? {
         guard continuation == nil,
-            let screen = NSScreen.screens.first(where: { $0.displayID == shot.displayID }) ?? NSScreen.main
+            let screen = NSScreen.screens.first(where: { $0.displayID == selection.displayID })
         else { return nil }
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
-            show(shot, on: screen)
+            show(selection, on: screen)
             onShown()
         }
     }
 
-    private func show(_ shot: CapturedImage, on screen: NSScreen) {
+    private func show(_ selection: CaptureSelection, on screen: NSScreen) {
         let window = ScreenCoverWindow(screen: screen)
-        let view = BeltView(shot: shot, screenOrigin: screen.frame.origin)
-        view.onFinish = { [weak self] action in self?.finish(action) }
+        let view = BeltView(selection: selection, scale: screen.backingScaleFactor)
+        view.onFinish = { [weak self] choice in self?.finish(choice) }
         window.contentView = view
         window.makeFirstResponder(view)
         NSApp.activate()
@@ -36,41 +42,54 @@ final class CaptureBelt {
         self.window = window
     }
 
-    private func finish(_ action: Action?) {
+    private func finish(_ choice: Choice?) {
         window?.orderOut(nil)
         window = nil
-        continuation?.resume(returning: action)
+        continuation?.resume(returning: choice)
         continuation = nil
     }
 }
 
-/// The dimmed screen with the frozen capture and its toolbar; handles the belt's keys.
+/// The dimmed screen with the live selection, its size tag and the bar; resizes, moves, and handles the keys.
 private final class BeltView: NSView {
-    var onFinish: (@MainActor (CaptureBelt.Action?) -> Void)?
+    private static let grabTolerance: CGFloat = 8
 
-    private let image: CGImage
-    private let imageFrame: CGRect
+    var onFinish: (@MainActor (CaptureBelt.Choice?) -> Void)?
+
+    private let selection: CaptureSelection
+    private let scale: CGFloat
+    /// The selection in this screen's local points; fixed for a window, editable otherwise.
+    private var rect: CGRect
     private var toolbar: GlassBar?
     private let sizeTag = GlassTag()
+    private var drag: Drag?
 
-    init(shot: CapturedImage, screenOrigin: CGPoint) {
-        image = shot.image
-        imageFrame = shot.frame.offsetBy(dx: -screenOrigin.x, dy: -screenOrigin.y)
+    /// A resize or move in progress: what was grabbed, and where the pointer and selection started.
+    private struct Drag {
+        let handle: ScreenGeometry.ResizeHandle
+        let start: CGPoint
+        let startRect: CGRect
+    }
+
+    init(selection: CaptureSelection, scale: CGFloat) {
+        self.selection = selection
+        self.scale = scale
+        rect = Self.localRect(for: selection)
         super.init(frame: .zero)
         let toolbar = GlassBar(
             items: [
                 .init(
                     symbol: "doc.on.doc", title: "Copy", shortcut: .text("⌘C"), toolTip: "Copy to the clipboard",
-                    perform: { [weak self] in self?.onFinish?(.copy) }),
+                    perform: { [weak self] in self?.choose(.copy) }),
                 .init(
                     symbol: "square.and.arrow.down", title: "Save", shortcut: .text("⌘S"), toolTip: "Save to Pictures",
-                    perform: { [weak self] in self?.onFinish?(.save) }),
+                    perform: { [weak self] in self?.choose(.save) }),
             ],
             closeToolTip: "Close (Esc)", close: { [weak self] in self?.onFinish?(nil) })
         addSubview(toolbar)
         self.toolbar = toolbar
-        sizeTag.show("\(image.width) × \(image.height)")
         addSubview(sizeTag)
+        updateTag()
     }
 
     @available(*, unavailable)
@@ -80,31 +99,129 @@ private final class BeltView: NSView {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    private var isResizable: Bool {
+        if case .window = selection.target { return false }
+        return true
+    }
+
+    private static func localRect(for selection: CaptureSelection) -> CGRect {
+        let screenBounds = CGRect(origin: .zero, size: selection.screenFrame.size)
+        switch selection.target {
+        case .display:
+            return screenBounds
+        case .area(let area):
+            return area
+        case .window(let id):
+            let frame = WindowList.snapshot().windows.first { $0.id == id }?.frame ?? selection.screenFrame
+            let local = frame.offsetBy(dx: -selection.screenFrame.minX, dy: -selection.screenFrame.minY)
+            return local.intersection(screenBounds)
+        }
+    }
+
+    /// The selection to capture: the window unchanged, the whole display while untouched, else the area.
+    private var finalSelection: CaptureSelection {
+        if !isResizable { return selection }
+        let isWholeScreen = rect == CGRect(origin: .zero, size: selection.screenFrame.size)
+        return CaptureSelection(
+            displayID: selection.displayID, screenFrame: selection.screenFrame,
+            target: isWholeScreen ? .display : .area(rect))
+    }
+
+    private func choose(_ action: CaptureBelt.Action) {
+        onFinish?(CaptureBelt.Choice(action: action, selection: finalSelection))
+    }
+
+    private func updateTag() {
+        let size = ScreenGeometry.evenPixelSize(rect.size, scale: scale)
+        sizeTag.show("\(size.width) × \(size.height)")
+        needsLayout = true
+        needsDisplay = true
+    }
+
     override func layout() {
         super.layout()
         if let toolbar {
             toolbar.setFrameOrigin(
                 ScreenGeometry.barOrigin(
-                    for: toolbar.frame.size, under: imageFrame, in: bounds, gap: Config.Bar.selectionGap,
+                    for: toolbar.frame.size, under: rect, in: bounds, gap: Config.Bar.selectionGap,
                     inset: Config.Style.barBottomOffset))
         }
         sizeTag.setFrameOrigin(
-            ScreenGeometry.tagOrigin(for: sizeTag.frame.size, on: imageFrame, in: bounds, lift: Config.Style.tagLift))
+            ScreenGeometry.tagOrigin(for: sizeTag.frame.size, on: rect, in: bounds, lift: Config.Style.tagLift))
     }
 
     override func draw(_ dirtyRect: NSRect) {
         NSColor.black.withAlphaComponent(Config.Style.dimOpacity).setFill()
         bounds.fill()
         NSColor.clear.setFill()
-        imageFrame.fill(using: .copy)
-        NSGraphicsContext.current?.cgContext.draw(image, in: imageFrame)
-        Panel.drawSelectionFrame(imageFrame)
+        rect.fill(using: .copy)
+        Panel.drawSelectionFrame(rect)
     }
+
+    // MARK: - Resize and move
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(
+            NSTrackingArea(rect: .zero, options: [.mouseMoved, .activeAlways, .inVisibleRect], owner: self))
+    }
+
+    private func handle(at event: NSEvent) -> ScreenGeometry.ResizeHandle? {
+        guard isResizable else { return nil }
+        let point = convert(event.locationInWindow, from: nil)
+        return ScreenGeometry.handle(at: point, of: rect, tolerance: Self.grabTolerance)
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        Self.cursor(for: handle(at: event)).set()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let handle = handle(at: event) else { return }
+        drag = Drag(handle: handle, start: convert(event.locationInWindow, from: nil), startRect: rect)
+        if handle == .move { NSCursor.closedHand.set() }
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let drag else { return }
+        let point = convert(event.locationInWindow, from: nil)
+        rect =
+            ScreenGeometry.resize(
+                drag.startRect, with: drag.handle, by: CGVector(dx: point.x - drag.start.x, dy: point.y - drag.start.y),
+                in: bounds, minimum: Config.Overlay.minimumDrag
+            ).integral
+        updateTag()
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        drag = nil
+        Self.cursor(for: handle(at: event)).set()
+    }
+
+    private static func cursor(for handle: ScreenGeometry.ResizeHandle?) -> NSCursor {
+        let position: NSCursor.FrameResizePosition
+        switch handle {
+        case .topLeft: position = .topLeft
+        case .top: position = .top
+        case .topRight: position = .topRight
+        case .right: position = .right
+        case .bottomRight: position = .bottomRight
+        case .bottom: position = .bottom
+        case .bottomLeft: position = .bottomLeft
+        case .left: position = .left
+        case .move: return .openHand
+        case nil: return .arrow
+        }
+        return .frameResize(position: position, directions: .all)
+    }
+
+    // MARK: - Keys
 
     override func keyDown(with event: NSEvent) {
         switch Int(event.keyCode) {
         case kVK_Escape: onFinish?(nil)
-        case kVK_Return, kVK_ANSI_KeypadEnter: onFinish?(.copy)
+        case kVK_Return, kVK_ANSI_KeypadEnter: choose(.copy)
         default: super.keyDown(with: event)
         }
     }
@@ -114,8 +231,8 @@ private final class BeltView: NSView {
             return super.performKeyEquivalent(with: event)
         }
         switch Int(event.keyCode) {
-        case kVK_ANSI_C: onFinish?(.copy)
-        case kVK_ANSI_S: onFinish?(.save)
+        case kVK_ANSI_C: choose(.copy)
+        case kVK_ANSI_S: choose(.save)
         default: return super.performKeyEquivalent(with: event)
         }
         return true
