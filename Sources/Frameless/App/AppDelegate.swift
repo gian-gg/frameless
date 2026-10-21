@@ -151,7 +151,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             defer { showIdle() }
             guard let selection = await selector.select(for: .screenshot) else { return }
             do {
-                let url = try await Screenshotter.capture(selection)
+                let shot = try await Screenshotter.captureImage(selection)
+                let url = try Screenshotter.save(shot)
+                Screenshotter.copy(shot)
                 playSound(.screenshot)
                 thumbnail.show(url, on: NSScreen.screens.first { $0.displayID == selection.displayID })
             } catch let error as SCStreamError where error.code == .userDeclined {
