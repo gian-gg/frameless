@@ -12,14 +12,15 @@ final class CaptureBelt {
     private var window: ScreenCoverWindow?
     private var continuation: CheckedContinuation<Action?, Never>?
 
-    /// Shows the capture on its screen; returns the chosen action, or nil when closed.
-    func present(_ shot: CapturedImage) async -> Action? {
+    /// Shows the capture on its screen, calls `onShown` once it's up; returns the chosen action, or nil when closed.
+    func present(_ shot: CapturedImage, onShown: @MainActor () -> Void = {}) async -> Action? {
         guard continuation == nil,
             let screen = NSScreen.screens.first(where: { $0.displayID == shot.displayID }) ?? NSScreen.main
         else { return nil }
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
             show(shot, on: screen)
+            onShown()
         }
     }
 
@@ -30,7 +31,7 @@ final class CaptureBelt {
         window.contentView = view
         window.makeFirstResponder(view)
         NSApp.activate()
-        window.fadeIn()
+        window.orderFrontRegardless()
         window.makeKey()
         self.window = window
     }

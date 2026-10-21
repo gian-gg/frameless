@@ -75,10 +75,21 @@ final class AreaSelector {
         }
     }
 
+    /// Hands back the selection; on a pick the overlay stays up, frozen, until `dismiss()`.
     private func finish(_ selection: CaptureSelection?) {
+        guard let continuation else { return }
+        if selection == nil {
+            dismiss()
+        } else {
+            for window in windows { window.ignoresMouseEvents = true }
+        }
+        continuation.resume(returning: selection)
+        self.continuation = nil
+    }
+
+    /// Removes the overlay; called once whatever follows the selection is on screen.
+    func dismiss() {
         for window in windows { window.orderOut(nil) }
         windows = []
-        continuation?.resume(returning: selection)
-        continuation = nil
     }
 }

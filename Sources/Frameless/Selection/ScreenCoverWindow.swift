@@ -11,6 +11,7 @@ class ScreenCoverWindow: NSWindow {
         hasShadow = false
         ignoresMouseEvents = false
         isReleasedWhenClosed = false
+        animationBehavior = .none
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
     }
 

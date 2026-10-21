@@ -154,6 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         state = .busy
         Task {
             guard let selection = await selector.select(for: .recording) else { return showIdle() }
+            selector.dismiss()
             do {
                 let url = try RecordingFile.directory().appending(path: RecordingFile.name(for: .now))
                 try await recorder.start(selection, options: preferences.recordingOptions, to: url)
@@ -265,9 +266,10 @@ extension AppDelegate {
         Task {
             defer { showIdle() }
             guard let selection = await selector.select(for: .screenshot) else { return }
+            defer { selector.dismiss() }
             do {
                 let shot = try await Screenshotter.captureImage(selection)
-                switch await belt.present(shot) {
+                switch await belt.present(shot, onShown: { [selector] in selector.dismiss() }) {
                 case .copy:
                     Screenshotter.copy(shot)
                     playSound(.screenshot)
@@ -279,8 +281,10 @@ extension AppDelegate {
                     break
                 }
             } catch let error as SCStreamError where error.code == .userDeclined {
+                selector.dismiss()
                 showPermissionAlert(.screenRecording)
             } catch {
+                selector.dismiss()
                 showError("Couldn't take screenshot", error)
             }
         }
