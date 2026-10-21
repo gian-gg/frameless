@@ -38,11 +38,11 @@ enum Config {
 
     /// Display and area picker.
     enum Overlay {
-        static let displayTitle = "Click to record this display"
-        static let dragHint = "Drag to record an area"
+        static func displayTitle(_ verb: String) -> String { "Click to \(verb) this display" }
+        static func dragHint(_ verb: String) -> String { "Drag to \(verb) an area" }
         static let cancelHint = "Cancel"
         static let windowHint = "Window"
-        static let windowTitle = "Click a window to record it"
+        static func windowTitle(_ verb: String) -> String { "Click a window to \(verb) it" }
         static let screenHint = "Display or area"
         static let windowSymbol = "macwindow"
         static let windowLabelLength = 48

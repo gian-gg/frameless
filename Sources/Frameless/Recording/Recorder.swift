@@ -67,17 +67,7 @@ final class Recorder: NSObject {
         for filter: SCContentFilter, area: CGRect?, options: RecordingOptions
     ) -> SCStreamConfiguration {
         let config = SCStreamConfiguration()
-        let scale = CGFloat(filter.pointPixelScale)
-        let screenSize = filter.contentRect.size
-        if let area, let capture = ScreenGeometry.captureArea(fromLocal: area, screenSize: screenSize, scale: scale) {
-            config.sourceRect = capture.sourceRect
-            config.width = capture.width
-            config.height = capture.height
-        } else {
-            let size = ScreenGeometry.evenPixelSize(screenSize, scale: scale)
-            config.width = size.width
-            config.height = size.height
-        }
+        CaptureSource.applyRegion(of: filter, area: area, to: config)
         let output = ScreenGeometry.fitted((config.width, config.height), within: options.resolution.maxSize)
         config.width = output.width
         config.height = output.height

@@ -143,21 +143,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Captures the display under the cursor, the one whose menu bar was just clicked.
+    /// Picks a display, area or window with the overlay, then captures it.
     @objc private func takeScreenshot() {
         guard case .idle = state, hasScreenRecordingAccess() else { return }
-        let mouse = NSEvent.mouseLocation
-        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(mouse) }) ?? NSScreen.main,
-            let displayID = screen.displayID
-        else { return }
-        let selection = CaptureSelection(displayID: displayID, screenFrame: screen.frame, target: .display)
         state = .busy
         Task {
             defer { showIdle() }
+            guard let selection = await selector.select(for: .screenshot) else { return }
             do {
                 let url = try await Screenshotter.capture(selection)
                 playSound(.screenshot)
-                thumbnail.show(url, on: screen)
+                thumbnail.show(url, on: NSScreen.screens.first { $0.displayID == selection.displayID })
             } catch let error as SCStreamError where error.code == .userDeclined {
                 showPermissionAlert(.screenRecording)
             } catch {
@@ -183,7 +179,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         state = .busy
         Task {
-            guard let selection = await selector.select() else { return showIdle() }
+            guard let selection = await selector.select(for: .recording) else { return showIdle() }
             do {
                 let url = try RecordingFile.directory().appending(path: RecordingFile.name(for: .now))
                 try await recorder.start(selection, options: preferences.recordingOptions, to: url)

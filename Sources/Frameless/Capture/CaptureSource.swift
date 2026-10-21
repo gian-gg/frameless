@@ -30,4 +30,19 @@ enum CaptureSource {
         let ownApps = content.applications.filter { $0.bundleIdentifier == Bundle.main.bundleIdentifier }
         return SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: [])
     }
+
+    /// Crops the configuration to the selection's area, if any, and sizes it to the source's real pixels.
+    static func applyRegion(of filter: SCContentFilter, area: CGRect?, to config: SCStreamConfiguration) {
+        let scale = CGFloat(filter.pointPixelScale)
+        let screenSize = filter.contentRect.size
+        if let area, let capture = ScreenGeometry.captureArea(fromLocal: area, screenSize: screenSize, scale: scale) {
+            config.sourceRect = capture.sourceRect
+            config.width = capture.width
+            config.height = capture.height
+        } else {
+            let size = ScreenGeometry.evenPixelSize(screenSize, scale: scale)
+            config.width = size.width
+            config.height = size.height
+        }
+    }
 }

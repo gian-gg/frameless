@@ -28,21 +28,21 @@ final class AreaSelector {
     private var continuation: CheckedContinuation<CaptureSelection?, Never>?
 
     /// Shows the overlay on every display; nil when cancelled.
-    func select() async -> CaptureSelection? {
+    func select(for purpose: CapturePurpose) async -> CaptureSelection? {
         guard continuation == nil else { return nil }
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
-            showOverlays()
+            showOverlays(for: purpose)
         }
     }
 
-    private func showOverlays() {
+    private func showOverlays(for purpose: CapturePurpose) {
         windowList = WindowList.snapshot()
         mode = .screen
         windows = NSScreen.screens.compactMap { screen in
             guard let displayID = screen.displayID else { return nil }
             let frame = screen.frame
-            let window = OverlayWindow(screen: screen)
+            let window = OverlayWindow(screen: screen, purpose: purpose)
             window.overlay.onFinish = { [weak self] target in
                 self?.finish(CaptureSelection(displayID: displayID, screenFrame: frame, target: target))
             }

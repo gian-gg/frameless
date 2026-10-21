@@ -93,21 +93,21 @@ struct HintCard {
     }
 
     /// The hovered display: click to record it, drag for an area, space for a window.
-    static func display(pixelWidth: Int, pixelHeight: Int) -> HintCard {
+    static func display(pixelWidth: Int, pixelHeight: Int, purpose: CapturePurpose) -> HintCard {
         HintCard(
-            iconSymbol: Config.Overlay.displaySymbol, title: Config.Overlay.displayTitle,
+            iconSymbol: Config.Overlay.displaySymbol, title: Config.Overlay.displayTitle(purpose.verb),
             detail: "\(pixelWidth) × \(pixelHeight)",
             hints: [
-                Hint(glyph: .symbol(Config.Overlay.dragSymbol), label: Config.Overlay.dragHint),
+                Hint(glyph: .symbol(Config.Overlay.dragSymbol), label: Config.Overlay.dragHint(purpose.verb)),
                 Hint(glyph: .key("space"), label: Config.Overlay.windowHint),
                 Hint(glyph: .key("esc"), label: Config.Overlay.cancelHint),
             ])
     }
 
     /// Window mode with no window under the cursor.
-    static func windowMode() -> HintCard {
+    static func windowMode(purpose: CapturePurpose) -> HintCard {
         HintCard(
-            iconSymbol: Config.Overlay.windowSymbol, title: Config.Overlay.windowTitle, detail: nil,
+            iconSymbol: Config.Overlay.windowSymbol, title: Config.Overlay.windowTitle(purpose.verb), detail: nil,
             hints: [
                 Hint(glyph: .key("space"), label: Config.Overlay.screenHint),
                 Hint(glyph: .key("esc"), label: Config.Overlay.cancelHint),

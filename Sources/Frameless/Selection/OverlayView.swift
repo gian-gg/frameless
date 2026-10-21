@@ -5,8 +5,8 @@ import Carbon.HIToolbox
 final class OverlayWindow: NSWindow {
     let overlay: OverlayView
 
-    init(screen: NSScreen) {
-        overlay = OverlayView(scale: screen.backingScaleFactor, screenOrigin: screen.frame.origin)
+    init(screen: NSScreen, purpose: CapturePurpose) {
+        overlay = OverlayView(scale: screen.backingScaleFactor, screenOrigin: screen.frame.origin, purpose: purpose)
         super.init(contentRect: screen.frame, styleMask: .borderless, backing: .buffered, defer: false)
         setFrame(screen.frame, display: false)
         level = .screenSaver
@@ -69,12 +69,14 @@ final class OverlayView: NSView {
 
     private let scale: CGFloat
     private let screenOrigin: CGPoint
+    private let purpose: CapturePurpose
     private var anchor: CGPoint?
     private var current: CGPoint?
 
-    init(scale: CGFloat, screenOrigin: CGPoint) {
+    init(scale: CGFloat, screenOrigin: CGPoint, purpose: CapturePurpose) {
         self.scale = scale
         self.screenOrigin = screenOrigin
+        self.purpose = purpose
         super.init(frame: .zero)
     }
 
@@ -191,7 +193,7 @@ final class OverlayView: NSView {
         border.stroke()
 
         let size = ScreenGeometry.evenPixelSize(bounds.size, scale: scale)
-        HintCard.display(pixelWidth: size.width, pixelHeight: size.height).draw(centeredIn: bounds)
+        HintCard.display(pixelWidth: size.width, pixelHeight: size.height, purpose: purpose).draw(centeredIn: bounds)
     }
 
     private func drawSelection(_ rect: CGRect) {
@@ -207,7 +209,7 @@ final class OverlayView: NSView {
         bounds.fill()
 
         guard let highlightedWindow else {
-            if isHovered { HintCard.windowMode().draw(centeredIn: bounds) }
+            if isHovered { HintCard.windowMode(purpose: purpose).draw(centeredIn: bounds) }
             return
         }
         let local = highlightedWindow.frame.offsetBy(dx: -screenOrigin.x, dy: -screenOrigin.y).intersection(bounds)

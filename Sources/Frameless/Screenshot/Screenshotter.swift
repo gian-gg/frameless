@@ -11,13 +11,12 @@ enum Screenshotter {
         var errorDescription: String? { "The screenshot couldn't be saved." }
     }
 
-    /// Captures the selection at full pixel resolution without the cursor; returns the saved file.
+    /// Captures the display, area or window at full pixel resolution without the cursor; returns the saved file.
     static func capture(_ selection: CaptureSelection) async throws -> URL {
         let filter = try await CaptureSource.filter(for: selection)
         let scale = CGFloat(filter.pointPixelScale)
         let config = SCStreamConfiguration()
-        config.width = Int((filter.contentRect.width * scale).rounded())
-        config.height = Int((filter.contentRect.height * scale).rounded())
+        CaptureSource.applyRegion(of: filter, area: selection.area, to: config)
         config.captureResolution = .best
         config.showsCursor = false
 
