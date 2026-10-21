@@ -33,6 +33,7 @@ enum Config {
         static let idleDimOpacity: CGFloat = 0.5
         static let pillOpacity: CGFloat = 0.75
         static let minimumDrag: CGFloat = 4
+        static let minimumWindowSize: CGFloat = 40
         static let fadeDuration: TimeInterval = 0.12
     }
 

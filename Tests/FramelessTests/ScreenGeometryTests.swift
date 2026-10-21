@@ -20,6 +20,13 @@ struct ScreenGeometryTests {
         #expect(area == .init(sourceRect: CGRect(x: 0, y: 0, width: 150, height: 100), width: 150, height: 100))
     }
 
+    @Test("flips a Core Graphics global rect to AppKit global")
+    func flipsCoreGraphicsRect() {
+        let rect = ScreenGeometry.appKitRect(
+            fromCG: CGRect(x: -300, y: -200, width: 400, height: 100), primaryScreenHeight: 1080)
+        #expect(rect == CGRect(x: -300, y: 1180, width: 400, height: 100))
+    }
+
     @Test("returns nil for a rect entirely off the screen")
     func offScreenIsNil() {
         let area = ScreenGeometry.captureArea(

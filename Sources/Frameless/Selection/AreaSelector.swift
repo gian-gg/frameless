@@ -1,10 +1,21 @@
 import AppKit
 
-/// What to record: a whole display, or an area of it in the screen's local AppKit points.
+/// What to record, on which display.
 struct CaptureSelection: Equatable {
+    enum Target: Equatable {
+        case display
+        /// An area in the screen's local AppKit points.
+        case area(CGRect)
+    }
+
     let displayID: CGDirectDisplayID
     let screenFrame: CGRect
-    let area: CGRect?
+    let target: Target
+
+    var area: CGRect? {
+        guard case .area(let rect) = target else { return nil }
+        return rect
+    }
 }
 
 /// Full-screen overlay that lets the user pick a display or region.
@@ -28,7 +39,8 @@ final class AreaSelector {
             let frame = screen.frame
             let window = OverlayWindow(screen: screen)
             window.overlay.onFinish = { [weak self] area in
-                self?.finish(CaptureSelection(displayID: displayID, screenFrame: frame, area: area))
+                let target = area.map(CaptureSelection.Target.area) ?? .display
+                self?.finish(CaptureSelection(displayID: displayID, screenFrame: frame, target: target))
             }
             window.overlay.onCancel = { [weak self] in self?.finish(nil) }
             return window

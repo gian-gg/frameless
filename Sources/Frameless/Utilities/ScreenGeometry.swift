@@ -20,6 +20,11 @@ enum ScreenGeometry {
         return CaptureArea(sourceRect: sourceRect, width: size.width, height: size.height)
     }
 
+    /// Flips a Core Graphics global rect (top-left of the primary display) to AppKit global (bottom-left).
+    static func appKitRect(fromCG rect: CGRect, primaryScreenHeight: CGFloat) -> CGRect {
+        CGRect(x: rect.minX, y: primaryScreenHeight - rect.maxY, width: rect.width, height: rect.height)
+    }
+
     /// Pixel dimensions for a point size, rounded down to even numbers for H.264.
     static func evenPixelSize(_ size: CGSize, scale: CGFloat) -> (width: Int, height: Int) {
         func even(_ points: CGFloat) -> Int { max(2, Int(points * scale) / 2 * 2) }
