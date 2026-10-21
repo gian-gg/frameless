@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let selector = AreaSelector()
     private let outline = AreaOutline()
     private let thumbnail = CaptureThumbnail()
+    private let belt = CaptureBelt()
     private var recordingScreen: NSScreen?
     private var state = State.idle
     private var statusItem: NSStatusItem?
@@ -143,35 +144,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Picks a display, area or window with the overlay, then captures it.
-    @objc private func takeScreenshot() {
-        guard case .idle = state, hasScreenRecordingAccess() else { return }
-        state = .busy
-        Task {
-            defer { showIdle() }
-            guard let selection = await selector.select(for: .screenshot) else { return }
-            do {
-                let shot = try await Screenshotter.captureImage(selection)
-                let url = try Screenshotter.save(shot)
-                Screenshotter.copy(shot)
-                playSound(.screenshot)
-                thumbnail.show(url, on: NSScreen.screens.first { $0.displayID == selection.displayID })
-            } catch let error as SCStreamError where error.code == .userDeclined {
-                showPermissionAlert(.screenRecording)
-            } catch {
-                showError("Couldn't take screenshot", error)
-            }
-        }
-    }
-
-    private func hasScreenRecordingAccess() -> Bool {
-        guard CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() else {
-            showPermissionAlert(.screenRecording)
-            return false
-        }
-        return true
-    }
-
     @objc private func startRecording() {
         guard case .idle = state, hasScreenRecordingAccess() else { return }
         if preferences.capturesMicrophone, AVCaptureDevice.authorizationStatus(for: .audio) != .authorized {
@@ -280,6 +252,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         elapsedItem.attributedTitle = NSAttributedString(
             string: "Recording · " + RecordingFile.elapsed(Date.now.timeIntervalSince(start)),
             attributes: [.font: font, .foregroundColor: NSColor.secondaryLabelColor])
+    }
+}
+
+// MARK: - Screenshots
+
+extension AppDelegate {
+    /// Picks a display, area or window with the overlay, then captures it.
+    @objc private func takeScreenshot() {
+        guard case .idle = state, hasScreenRecordingAccess() else { return }
+        state = .busy
+        Task {
+            defer { showIdle() }
+            guard let selection = await selector.select(for: .screenshot) else { return }
+            do {
+                let shot = try await Screenshotter.captureImage(selection)
+                switch await belt.present(shot) {
+                case .copy:
+                    Screenshotter.copy(shot)
+                    playSound(.screenshot)
+                case .save:
+                    let url = try Screenshotter.save(shot)
+                    playSound(.screenshot)
+                    thumbnail.show(url, on: NSScreen.screens.first { $0.displayID == selection.displayID })
+                case nil:
+                    break
+                }
+            } catch let error as SCStreamError where error.code == .userDeclined {
+                showPermissionAlert(.screenRecording)
+            } catch {
+                showError("Couldn't take screenshot", error)
+            }
+        }
+    }
+
+    private func hasScreenRecordingAccess() -> Bool {
+        guard CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() else {
+            showPermissionAlert(.screenRecording)
+            return false
+        }
+        return true
     }
 }
 

@@ -27,6 +27,28 @@ struct ScreenGeometryTests {
         #expect(rect == CGRect(x: -300, y: 1180, width: 400, height: 100))
     }
 
+    @Test(
+        "puts the toolbar below the capture, above it near the bottom, inside it when full screen",
+        arguments: zip(
+            [
+                CGRect(x: 100, y: 300, width: 400, height: 200),
+                CGRect(x: 100, y: 20, width: 400, height: 200),
+                CGRect(x: 0, y: 0, width: 1000, height: 800),
+                CGRect(x: 0, y: 300, width: 50, height: 100),
+            ],
+            [
+                CGPoint(x: 240, y: 252),
+                CGPoint(x: 240, y: 228),
+                CGPoint(x: 440, y: 8),
+                CGPoint(x: 8, y: 252),
+            ]))
+    func toolbarPlacement(rect: CGRect, expected: CGPoint) {
+        let origin = ScreenGeometry.toolbarOrigin(
+            for: CGSize(width: 120, height: 40), below: rect, in: CGRect(x: 0, y: 0, width: 1000, height: 800),
+            gap: 8)
+        #expect(origin == expected)
+    }
+
     @Test("places a window relative to its display and clips it to the display")
     func windowRectOnDisplay() {
         let display = CGRect(x: 1920, y: -200, width: 1512, height: 982)

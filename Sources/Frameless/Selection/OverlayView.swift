@@ -1,35 +1,15 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Borderless, key-capable window covering one screen.
-final class OverlayWindow: NSWindow {
+/// The picker's window on one screen.
+final class OverlayWindow: ScreenCoverWindow {
     let overlay: OverlayView
 
     init(screen: NSScreen, purpose: CapturePurpose) {
         overlay = OverlayView(scale: screen.backingScaleFactor, screenOrigin: screen.frame.origin, purpose: purpose)
-        super.init(contentRect: screen.frame, styleMask: .borderless, backing: .buffered, defer: false)
-        setFrame(screen.frame, display: false)
-        level = .screenSaver
-        isOpaque = false
-        backgroundColor = .clear
-        hasShadow = false
-        ignoresMouseEvents = false
-        isReleasedWhenClosed = false
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+        super.init(screen: screen)
         contentView = overlay
         makeFirstResponder(overlay)
-    }
-
-    override var canBecomeKey: Bool { true }
-
-    /// Orders the window in and fades it from transparent.
-    func fadeIn() {
-        alphaValue = 0
-        orderFrontRegardless()
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = Config.Overlay.fadeDuration
-            animator().alphaValue = 1
-        }
     }
 }
 
@@ -223,15 +203,7 @@ final class OverlayView: NSView {
     private func reveal(_ rect: CGRect) {
         NSColor.clear.setFill()
         rect.fill(using: .copy)
-
-        let outer = NSBezierPath(rect: rect.insetBy(dx: -0.5, dy: -0.5))
-        outer.lineWidth = 1
-        NSColor.black.withAlphaComponent(0.4).setStroke()
-        outer.stroke()
-        let inner = NSBezierPath(rect: rect.insetBy(dx: 0.5, dy: 0.5))
-        inner.lineWidth = 1
-        NSColor.white.setStroke()
-        inner.stroke()
+        OverlayDrawing.strokeSelection(rect)
     }
 
     /// Draws a pill label above a rect's top-left corner, or inside it at the top edge of the screen.

@@ -36,6 +36,16 @@ enum Config {
         static let thumbnailFadeDuration: TimeInterval = 0.2
     }
 
+    /// Copy / Save toolbar shown after a screenshot.
+    enum Belt {
+        static let gap: CGFloat = 8
+        static let buttonSize = CGSize(width: 34, height: 28)
+        static let padding: CGFloat = 4
+        static let separatorGap: CGFloat = 6
+        static let iconSize: CGFloat = 14
+        static let cornerRadius: CGFloat = 0
+    }
+
     /// Display and area picker.
     enum Overlay {
         static func displayTitle(_ verb: String) -> String { "Click to \(verb) this display" }

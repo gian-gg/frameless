@@ -25,6 +25,18 @@ enum OverlayDrawing {
         return NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(config)
     }
 
+    /// White outline on a dark hairline, readable over light and dark content.
+    static func strokeSelection(_ rect: CGRect) {
+        let outer = NSBezierPath(rect: rect.insetBy(dx: -0.5, dy: -0.5))
+        outer.lineWidth = 1
+        NSColor.black.withAlphaComponent(0.4).setStroke()
+        outer.stroke()
+        let inner = NSBezierPath(rect: rect.insetBy(dx: 0.5, dy: 0.5))
+        inner.lineWidth = 1
+        NSColor.white.setStroke()
+        inner.stroke()
+    }
+
     /// Dark translucent rounded background with a hairline edge.
     static func fillPill(_ frame: CGRect, radius: CGFloat = pillRadius) {
         let shape = NSBezierPath(roundedRect: frame, xRadius: radius, yRadius: radius)

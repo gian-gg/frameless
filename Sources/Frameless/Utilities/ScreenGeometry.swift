@@ -20,6 +20,19 @@ enum ScreenGeometry {
         return CaptureArea(sourceRect: sourceRect, width: size.width, height: size.height)
     }
 
+    /// Where a toolbar goes for a rect: centred below it, else above, else inside at the bottom; kept on screen.
+    static func toolbarOrigin(for size: CGSize, below rect: CGRect, in bounds: CGRect, gap: CGFloat) -> CGPoint {
+        var top = rect.minY - gap - size.height
+        if top < bounds.minY {
+            top = rect.maxY + gap
+            if top + size.height > bounds.maxY {
+                top = max(rect.minY, bounds.minY) + gap
+            }
+        }
+        let left = min(max(rect.midX - size.width / 2, bounds.minX + gap), bounds.maxX - gap - size.width)
+        return CGPoint(x: left, y: top)
+    }
+
     /// A window's frame relative to a display, clipped to it; both in Core Graphics global points.
     static func windowRect(_ window: CGRect, onDisplay display: CGRect) -> CGRect? {
         let visible = window.intersection(display)
