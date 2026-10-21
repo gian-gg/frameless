@@ -5,23 +5,24 @@ import ScreenCaptureKit
 /// Owns the menu bar item, its menu and the recording lifecycle.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private enum State {
+    enum State {
         case idle
         case busy
         case recording(since: Date)
     }
 
-    private let preferences = Preferences()
+    let preferences = Preferences()
     private let recorder = Recorder()
     private let selector = AreaSelector()
     private let outline = AreaOutline()
     private let thumbnail = CaptureThumbnail()
     private let editor = SelectionEditor()
-    private let hotkeys = Hotkeys()
+    let hotkeys = Hotkeys()
+    let shortcutRecorder = ShortcutRecorder()
     private var recordingScreen: NSScreen?
-    private var state = State.idle
+    var state = State.idle
     private var statusItem: NSStatusItem?
-    private var menu: NSMenu?
+    var menu: NSMenu?
     private let recordingMenu = NSMenu()
     private let elapsedItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     private var timer: Timer?
@@ -32,9 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         buildRecordingMenu()
         recorder.onEndedEarly = { [weak self] end in self?.recordingEndedEarly(end) }
         hotkeys.onPress = { [weak self] action in self?.hotkeyPressed(action) }
-        for action in Hotkeys.Action.allCases {
-            hotkeys.set(preferences.shortcut(for: action), for: action)
-        }
+        registerShortcuts()
         showIdle()
     }
 
@@ -90,6 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(withTitle: "Quality", action: nil, keyEquivalent: "").submenu = makeQualityMenu()
         menu.addItem(withTitle: "Frame Rate", action: nil, keyEquivalent: "").submenu = choiceMenu(
             FrameRate.allCases, title: \.title, \.frameRate)
+        menu.addItem(withTitle: "Shortcuts", action: nil, keyEquivalent: "").submenu = makeShortcutsMenu()
         menu.addItem(.separator())
         menu.addItem(toggleItem("Play Sounds", \.playsSounds))
         menu.addItem(withTitle: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
@@ -174,7 +174,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if preferences.playsSounds { sound.play() }
     }
 
-    private func showIdle() {
+    func showIdle() {
         state = .idle
         timer?.invalidate()
         timer = nil
