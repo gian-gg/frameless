@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case recording(since: Date)
     }
 
+    private let preferences = Preferences()
     private let recorder = Recorder()
     private let selector = AreaSelector()
     private let outline = AreaOutline()
@@ -32,8 +33,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         menu.addItem(withTitle: "Record Screen", action: #selector(startRecording), keyEquivalent: "").target = self
         menu.addItem(.separator())
+        menu.addItem(withTitle: "Preferences", action: nil, keyEquivalent: "").submenu = makePreferencesMenu()
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Frameless", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         return menu
+    }
+
+    private func makePreferencesMenu() -> NSMenu {
+        let menu = NSMenu()
+        menu.addItem(toggleItem("System Audio", \.capturesSystemAudio))
+        menu.addItem(toggleItem("Show Cursor", \.showsCursor))
+        return menu
+    }
+
+    private func toggleItem(_ title: String, _ keyPath: ReferenceWritableKeyPath<Preferences, Bool>) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: #selector(toggle(_:)), keyEquivalent: "")
+        item.target = self
+        item.representedObject = keyPath
+        return item
+    }
+
+    @objc private func toggle(_ sender: NSMenuItem) {
+        guard let keyPath = sender.representedObject as? ReferenceWritableKeyPath<Preferences, Bool> else { return }
+        preferences[keyPath: keyPath].toggle()
     }
 
     @objc private func startRecording() {
@@ -47,7 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let selection = await selector.select() else { return showIdle() }
             do {
                 let url = try RecordingFile.directory().appending(path: RecordingFile.name(for: .now))
-                try await recorder.start(selection, to: url)
+                try await recorder.start(selection, options: preferences.recordingOptions, to: url)
                 outline.show(selection)
                 showRecording(since: .now)
             } catch let error as SCStreamError where error.code == .userDeclined {
@@ -143,6 +165,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 extension AppDelegate: NSMenuItemValidation {
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if let keyPath = menuItem.representedObject as? ReferenceWritableKeyPath<Preferences, Bool> {
+            menuItem.state = preferences[keyPath: keyPath] ? .on : .off
+            return true
+        }
         guard menuItem.action == #selector(startRecording) else { return true }
         if case .idle = state { return true }
         return false
