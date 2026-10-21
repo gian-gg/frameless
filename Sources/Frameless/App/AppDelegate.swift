@@ -76,6 +76,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             VideoCodec.allCases, title: \.title, action: #selector(selectCodec(_:)))
         menu.addItem(withTitle: "Frame Rate", action: nil, keyEquivalent: "").submenu = choiceMenu(
             FrameRate.allCases, title: \.title, action: #selector(selectFrameRate(_:)))
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
+            .target = self
         return menu
     }
 
@@ -97,6 +100,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func selectFrameRate(_ sender: NSMenuItem) {
         guard let frameRate = sender.representedObject as? FrameRate else { return }
         preferences.frameRate = frameRate
+    }
+
+    @objc private func toggleLaunchAtLogin() {
+        do {
+            try LaunchAtLogin.toggle()
+        } catch {
+            showError("Couldn't change Launch at Login", error)
+        }
     }
 
     private func toggleItem(
@@ -246,6 +257,10 @@ extension AppDelegate: NSMenuItemValidation {
         }
         if let frameRate = menuItem.representedObject as? FrameRate {
             menuItem.state = preferences.frameRate == frameRate ? .on : .off
+            return true
+        }
+        if menuItem.action == #selector(toggleLaunchAtLogin) {
+            menuItem.state = LaunchAtLogin.isEnabled ? .on : .off
             return true
         }
         guard menuItem.action == #selector(startRecording) else { return true }
