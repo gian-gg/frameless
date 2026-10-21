@@ -7,6 +7,7 @@ final class Preferences {
         static let capturesSystemAudio = "capturesSystemAudio"
         static let capturesMicrophone = "capturesMicrophone"
         static let showsCursor = "showsCursor"
+        static let videoCodec = "videoCodec"
     }
 
     private let defaults: UserDefaults
@@ -17,6 +18,7 @@ final class Preferences {
             Key.capturesSystemAudio: Config.Recording.capturesSystemAudio,
             Key.capturesMicrophone: Config.Recording.capturesMicrophone,
             Key.showsCursor: Config.Recording.showsCursor,
+            Key.videoCodec: Config.Recording.videoCodec.rawValue,
         ])
     }
 
@@ -35,8 +37,16 @@ final class Preferences {
         set { defaults.set(newValue, forKey: Key.showsCursor) }
     }
 
+    var videoCodec: VideoCodec {
+        get {
+            defaults.string(forKey: Key.videoCodec).flatMap(VideoCodec.init(rawValue:)) ?? Config.Recording.videoCodec
+        }
+        set { defaults.set(newValue.rawValue, forKey: Key.videoCodec) }
+    }
+
     var recordingOptions: RecordingOptions {
         RecordingOptions(
-            capturesSystemAudio: capturesSystemAudio, capturesMicrophone: capturesMicrophone, showsCursor: showsCursor)
+            capturesSystemAudio: capturesSystemAudio, capturesMicrophone: capturesMicrophone, showsCursor: showsCursor,
+            videoCodec: videoCodec)
     }
 }

@@ -71,7 +71,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(toggleItem("System Audio", \.capturesSystemAudio))
         menu.addItem(toggleItem("Microphone", \.capturesMicrophone, action: #selector(toggleMicrophone(_:))))
         menu.addItem(toggleItem("Show Cursor", \.showsCursor))
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Quality", action: nil, keyEquivalent: "").submenu = makeQualityMenu()
         return menu
+    }
+
+    private func makeQualityMenu() -> NSMenu {
+        let menu = NSMenu()
+        for codec in VideoCodec.allCases {
+            let item = menu.addItem(withTitle: codec.title, action: #selector(selectCodec(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = codec
+        }
+        return menu
+    }
+
+    @objc private func selectCodec(_ sender: NSMenuItem) {
+        guard let codec = sender.representedObject as? VideoCodec else { return }
+        preferences.videoCodec = codec
     }
 
     private func toggleItem(
@@ -213,6 +230,10 @@ extension AppDelegate: NSMenuItemValidation {
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         if let keyPath = menuItem.representedObject as? ReferenceWritableKeyPath<Preferences, Bool> {
             menuItem.state = preferences[keyPath: keyPath] ? .on : .off
+            return true
+        }
+        if let codec = menuItem.representedObject as? VideoCodec {
+            menuItem.state = preferences.videoCodec == codec ? .on : .off
             return true
         }
         guard menuItem.action == #selector(startRecording) else { return true }

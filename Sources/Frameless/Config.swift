@@ -8,7 +8,7 @@ enum Config {
     enum Recording {
         static let maxFramesPerSecond: Int32 = 60
         static let fileType: AVFileType = .mp4
-        static let videoCodec: AVVideoCodecType = .h264
+        static let videoCodec = VideoCodec.h264
         static let showsCursor = true
         static let capturesSystemAudio = true
         static let capturesMicrophone = false

@@ -28,9 +28,20 @@ struct PreferencesTests {
         preferences.capturesSystemAudio = false
         preferences.capturesMicrophone = true
         preferences.showsCursor = false
+        preferences.videoCodec = .hevc
 
         let reloaded = Preferences(defaults: defaults).recordingOptions
-        #expect(
-            reloaded == RecordingOptions(capturesSystemAudio: false, capturesMicrophone: true, showsCursor: false))
+        let expected = RecordingOptions(
+            capturesSystemAudio: false, capturesMicrophone: true, showsCursor: false, videoCodec: .hevc)
+        #expect(reloaded == expected)
+    }
+
+    @Test("an unknown saved codec falls back to the default")
+    func unknownCodecFallsBack() throws {
+        let defaults = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set("vp9", forKey: "videoCodec")
+        #expect(Preferences(defaults: defaults).videoCodec == Config.Recording.videoCodec)
     }
 }

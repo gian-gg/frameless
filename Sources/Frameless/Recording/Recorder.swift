@@ -26,7 +26,8 @@ final class Recorder: NSObject {
         let config = Self.configuration(for: filter, area: selection.area, options: options)
 
         let stream = SCStream(filter: filter, configuration: config, delegate: self)
-        let output = SCRecordingOutput(configuration: Self.outputConfiguration(to: url), delegate: self)
+        let output = SCRecordingOutput(
+            configuration: Self.outputConfiguration(to: url, codec: options.videoCodec), delegate: self)
         try stream.addRecordingOutput(output)
 
         finishResult = nil
@@ -73,11 +74,11 @@ final class Recorder: NSObject {
         return config
     }
 
-    private static func outputConfiguration(to url: URL) -> SCRecordingOutputConfiguration {
+    private static func outputConfiguration(to url: URL, codec: VideoCodec) -> SCRecordingOutputConfiguration {
         let config = SCRecordingOutputConfiguration()
         config.outputURL = url
         config.outputFileType = Config.Recording.fileType
-        config.videoCodecType = Config.Recording.videoCodec
+        config.videoCodecType = codec.codecType
         return config
     }
 
