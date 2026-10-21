@@ -11,32 +11,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case recording(since: Date)
     }
 
-    private enum Permission {
-        case screenRecording
-        case microphone
-
-        var name: String {
-            switch self {
-            case .screenRecording: "Screen Recording"
-            case .microphone: "Microphone"
-            }
-        }
-
-        var settingsPane: String {
-            switch self {
-            case .screenRecording: "Screen & System Audio Recording"
-            case .microphone: "Microphone"
-            }
-        }
-
-        var settingsURL: URL? {
-            switch self {
-            case .screenRecording: Config.Links.screenRecordingSettings
-            case .microphone: Config.Links.microphoneSettings
-            }
-        }
-    }
-
     private let preferences = Preferences()
     private let recorder = Recorder()
     private let selector = AreaSelector()
@@ -52,10 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         menu = makeMenu()
         buildRecordingMenu()
-        recorder.onUnexpectedStop = { [weak self] error in
-            self?.showIdle()
-            self?.showError("Recording stopped", error)
-        }
+        recorder.onEndedEarly = { [weak self] end in self?.recordingEndedEarly(end) }
         showIdle()
     }
 
@@ -217,8 +188,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 let url = try await recorder.stop()
                 if saving {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.writeObjects([url as NSURL])
+                    copyToClipboard(url)
                 } else {
                     try FileManager.default.removeItem(at: url)
                 }
@@ -228,6 +198,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 showError(saving ? "Couldn't save recording" : "Couldn't discard recording", error)
             }
         }
+    }
+
+    /// A recording macOS ended by itself is saved like Stop and Save; only a lost file is reported.
+    private func recordingEndedEarly(_ end: Recorder.EarlyEnd) {
+        showIdle()
+        switch end {
+        case .saved(let url):
+            copyToClipboard(url)
+        case .failed(let error):
+            showError("Recording ended and couldn't be saved", error)
+        }
+    }
+
+    private func copyToClipboard(_ url: URL) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.writeObjects([url as NSURL])
     }
 
     private func showIdle() {
@@ -257,27 +243,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         elapsedItem.attributedTitle = NSAttributedString(
             string: "Recording · " + RecordingFile.elapsed(Date.now.timeIntervalSince(start)),
             attributes: [.font: font, .foregroundColor: NSColor.secondaryLabelColor])
-    }
-
-    private func showError(_ message: String, _ error: Error) {
-        let alert = NSAlert()
-        alert.messageText = message
-        alert.informativeText = error.localizedDescription
-        NSApp.activate()
-        alert.runModal()
-    }
-
-    private func showPermissionAlert(_ permission: Permission) {
-        let alert = NSAlert()
-        alert.messageText = "Frameless needs \(permission.name) permission"
-        alert.informativeText =
-            "Turn on Frameless in System Settings › Privacy & Security › \(permission.settingsPane), then try again."
-        alert.addButton(withTitle: "Open System Settings")
-        alert.addButton(withTitle: "Cancel")
-        NSApp.activate()
-        if alert.runModal() == .alertFirstButtonReturn, let url = permission.settingsURL {
-            NSWorkspace.shared.open(url)
-        }
     }
 }
 

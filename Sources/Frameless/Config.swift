@@ -13,6 +13,7 @@ enum Config {
         static let showsCursor = true
         static let capturesSystemAudio = true
         static let capturesMicrophone = false
+        static let finishTimeout: TimeInterval = 5
     }
 
     /// Where recordings are saved and how they are named.

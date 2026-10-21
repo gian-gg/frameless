@@ -7,17 +7,25 @@ final class Recorder: NSObject {
         case noDisplay
         case noWindow
         case notRecording
+        case unfinished
 
         var errorDescription: String? {
             switch self {
             case .noDisplay: "That display is no longer connected."
             case .noWindow: "That window is no longer open."
             case .notRecording: "Nothing is being recorded."
+            case .unfinished: "The recording file couldn't be finished."
             }
         }
     }
 
-    var onUnexpectedStop: (@MainActor (Error) -> Void)?
+    /// How a recording that macOS stopped on its own turned out.
+    enum EarlyEnd {
+        case saved(URL)
+        case failed(Error)
+    }
+
+    var onEndedEarly: (@MainActor (EarlyEnd) -> Void)?
 
     private var stream: SCStream?
     private var outputURL: URL?
@@ -42,14 +50,9 @@ final class Recorder: NSObject {
     }
 
     func stop() async throws -> URL {
-        guard let stream, let outputURL else { throw RecorderError.notRecording }
+        guard let stream, let outputURL, !isStopping else { throw RecorderError.notRecording }
         isStopping = true
-        defer {
-            isStopping = false
-            finishResult = nil
-            self.stream = nil
-            self.outputURL = nil
-        }
+        defer { reset() }
         try await stream.stopCapture()
         try await waitForFinish()
         return outputURL
@@ -107,10 +110,17 @@ final class Recorder: NSObject {
         return config
     }
 
+    /// Waits for the file to be finished, failing after `Config.Recording.finishTimeout`.
     private func waitForFinish() async throws {
         if let finishResult {
             return try finishResult.get()
         }
+        let timeout = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Config.Recording.finishTimeout))
+            guard !Task.isCancelled else { return }
+            self?.finish(.failure(RecorderError.unfinished))
+        }
+        defer { timeout.cancel() }
         try await withCheckedThrowingContinuation { finishContinuation = $0 }
     }
 
@@ -123,21 +133,49 @@ final class Recorder: NSObject {
         continuation.resume(with: result)
     }
 
-    private func fail(_ error: Error) {
+    private func reset() {
+        isStopping = false
+        finishResult = nil
+        stream = nil
+        outputURL = nil
+    }
+
+    /// The stream ended without being asked to: keep the file if it can still be finished.
+    private func streamStopped() {
+        guard !isStopping, let outputURL else { return }
+        isStopping = true
+        Task {
+            defer { reset() }
+            do {
+                try await waitForFinish()
+                onEndedEarly?(.saved(outputURL))
+            } catch {
+                try? FileManager.default.removeItem(at: outputURL)
+                onEndedEarly?(.failed(error))
+            }
+        }
+    }
+
+    /// The file couldn't be written: stop capturing and drop the partial file.
+    private func outputFailed(_ error: Error) {
         if isStopping {
             finish(.failure(error))
             return
         }
-        guard stream != nil else { return }
-        stream = nil
-        outputURL = nil
-        onUnexpectedStop?(error)
+        guard let stream, let outputURL else { return }
+        isStopping = true
+        Task {
+            defer { reset() }
+            try? await stream.stopCapture()
+            try? FileManager.default.removeItem(at: outputURL)
+            onEndedEarly?(.failed(error))
+        }
     }
 }
 
 extension Recorder: SCStreamDelegate, SCRecordingOutputDelegate {
     nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
-        Task { @MainActor in self.fail(error) }
+        Task { @MainActor in self.streamStopped() }
     }
 
     nonisolated func recordingOutputDidFinishRecording(_ recordingOutput: SCRecordingOutput) {
@@ -145,6 +183,6 @@ extension Recorder: SCStreamDelegate, SCRecordingOutputDelegate {
     }
 
     nonisolated func recordingOutput(_ recordingOutput: SCRecordingOutput, didFailWithError error: Error) {
-        Task { @MainActor in self.fail(error) }
+        Task { @MainActor in self.outputFailed(error) }
     }
 }
