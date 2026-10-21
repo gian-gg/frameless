@@ -32,7 +32,14 @@ final class BarButton: NSControl {
     @available(*, unavailable)
     required init?(coder: NSCoder) { nil }
 
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    /// Off for labels: no hover, no clicks, just the drawing.
+    var isInteractive = true
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { isInteractive }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        isInteractive ? super.hitTest(point) : nil
+    }
 
     // MARK: - Content
 
@@ -112,7 +119,7 @@ final class BarButton: NSControl {
     // MARK: - Drawing
 
     override func draw(_ dirtyRect: NSRect) {
-        if isPressed || isHovering {
+        if isInteractive, isPressed || isHovering {
             NSColor.labelColor.withAlphaComponent(isPressed ? 0.22 : 0.1).setFill()
             let radius = min(bounds.width, bounds.height) / 2
             NSBezierPath(roundedRect: bounds, xRadius: radius, yRadius: radius).fill()
@@ -146,6 +153,7 @@ final class BarButton: NSControl {
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
+        guard isInteractive else { return }
         addTrackingArea(
             NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
     }

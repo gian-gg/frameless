@@ -1,7 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Waits for the next key combination on a dimmed screen with a glass prompt, for assigning a shortcut.
+/// Waits for the next key combination on a dimmed screen with the picker's bar and a message, to assign a shortcut.
 @MainActor
 final class ShortcutRecorder {
     enum Outcome {
@@ -43,18 +43,35 @@ final class ShortcutRecorder {
     }
 }
 
-/// Dim with a centred glass prompt; turns the next accepted key combination into a shortcut.
+/// Dim with the picker's bottom bar (Clear and ×) and a message above it; turns the next accepted key
+/// combination into a shortcut.
 private final class ShortcutRecorderView: NSView {
     var onFinish: (@MainActor (ShortcutRecorder.Outcome) -> Void)?
 
-    private let prompt = GlassTag()
+    private static let promptSymbol = "keyboard"
+    private static let warningSymbol = "exclamationmark.triangle"
+
+    private let message = GlassLabel()
+    private var bar: GlassBar?
+    private let actionName: String
+    private var isWarning = false
     private let reasonToReject: @MainActor (Shortcut) -> String?
 
     init(actionName: String, reasonToReject: @escaping @MainActor (Shortcut) -> String?) {
+        self.actionName = actionName
         self.reasonToReject = reasonToReject
         super.init(frame: .zero)
-        prompt.show("Press a shortcut for \(actionName)   ⌫ Clear   esc Cancel")
-        addSubview(prompt)
+        showPrompt()
+        addSubview(message)
+        let bar = GlassBar(
+            items: [
+                .init(
+                    symbol: "eraser", title: "Clear", shortcut: .text("⌫"), toolTip: "Remove this shortcut",
+                    perform: { [weak self] in self?.onFinish?(.clear) })
+            ],
+            closeToolTip: "Cancel (Esc)", close: { [weak self] in self?.onFinish?(.cancel) })
+        addSubview(bar)
+        self.bar = bar
     }
 
     @available(*, unavailable)
@@ -64,11 +81,15 @@ private final class ShortcutRecorderView: NSView {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    /// The bar at the picker's bottom-centre spot, the message centred just above it.
     override func layout() {
         super.layout()
-        let size = prompt.frame.size
-        prompt.setFrameOrigin(
-            CGPoint(x: (bounds.midX - size.width / 2).rounded(), y: (bounds.midY - size.height / 2).rounded()))
+        guard let bar else { return }
+        bar.setFrameOrigin(
+            CGPoint(x: (bounds.midX - bar.frame.width / 2).rounded(), y: bounds.minY + Config.Style.barBottomOffset))
+        message.setFrameOrigin(
+            CGPoint(
+                x: (bounds.midX - message.frame.width / 2).rounded(), y: bar.frame.maxY + Config.Bar.selectionGap))
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -78,6 +99,26 @@ private final class ShortcutRecorderView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         onFinish?(.cancel)
+    }
+
+    private func showMessage(symbol: String, text: String) {
+        isWarning = symbol == Self.warningSymbol
+        message.show(symbol: symbol, text: text)
+        needsLayout = true
+    }
+
+    private func showPrompt() {
+        showMessage(symbol: Self.promptSymbol, text: "Press a shortcut for \(actionName)")
+    }
+
+    /// Shows the modifiers as they're held; on release, back to the prompt unless a warning is showing.
+    override func flagsChanged(with event: NSEvent) {
+        let modifiers = Shortcut.Modifiers(event.modifierFlags)
+        if modifiers.isEmpty {
+            if !isWarning { showPrompt() }
+        } else {
+            showMessage(symbol: Self.promptSymbol, text: "\(modifiers.symbols)…")
+        }
     }
 
     override func keyDown(with event: NSEvent) {
@@ -99,8 +140,7 @@ private final class ShortcutRecorderView: NSView {
         }
         let shortcut = Shortcut(keyCode: UInt32(event.keyCode), modifiers: modifiers)
         if let reason = reasonToReject(shortcut) {
-            prompt.show("\(reason). Try another   esc Cancel")
-            needsLayout = true
+            showMessage(symbol: Self.warningSymbol, text: "\(reason). Try another")
             return
         }
         onFinish?(.set(shortcut))
