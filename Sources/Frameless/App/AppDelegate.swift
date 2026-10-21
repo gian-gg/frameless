@@ -15,6 +15,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let recorder = Recorder()
     private let selector = AreaSelector()
     private let outline = AreaOutline()
+    private let thumbnail = CaptureThumbnail()
+    private var recordingScreen: NSScreen?
     private var state = State.idle
     private var statusItem: NSStatusItem?
     private var menu: NSMenu?
@@ -153,8 +155,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             defer { showIdle() }
             do {
-                _ = try await Screenshotter.capture(selection)
+                let url = try await Screenshotter.capture(selection)
                 playSound(.screenshot)
+                thumbnail.show(url, on: screen)
             } catch let error as SCStreamError where error.code == .userDeclined {
                 showPermissionAlert(.screenRecording)
             } catch {
@@ -184,6 +187,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 let url = try RecordingFile.directory().appending(path: RecordingFile.name(for: .now))
                 try await recorder.start(selection, options: preferences.recordingOptions, to: url)
+                recordingScreen = NSScreen.screens.first { $0.displayID == selection.displayID }
                 outline.show(selection)
                 showRecording(since: .now)
                 playSound(.recordingStarted)
@@ -244,6 +248,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.writeObjects([url as NSURL])
         playSound(.recordingSaved)
+        thumbnail.show(url, on: recordingScreen)
     }
 
     private func playSound(_ sound: CaptureSound) {

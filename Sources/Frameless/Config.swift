@@ -30,6 +30,10 @@ enum Config {
         static let playsSounds = true
         static let soundsDirectory =
             "/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system"
+        static let thumbnailSize = CGSize(width: 200, height: 140)
+        static let thumbnailMargin: CGFloat = 16
+        static let thumbnailDuration: TimeInterval = 5
+        static let thumbnailFadeDuration: TimeInterval = 0.2
     }
 
     /// Display and area picker.
