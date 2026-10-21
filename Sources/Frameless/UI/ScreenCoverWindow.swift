@@ -1,10 +1,12 @@
 import AppKit
 
-/// Borderless, key-capable window covering one screen above everything, used by the picker and the selection editor.
-class ScreenCoverWindow: NSWindow {
+/// Borderless panel covering one screen above everything, taking keys without activating the app.
+class ScreenCoverWindow: NSPanel {
     init(screen: NSScreen) {
-        super.init(contentRect: screen.frame, styleMask: .borderless, backing: .buffered, defer: false)
+        super.init(
+            contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         setFrame(screen.frame, display: false)
+        hidesOnDeactivate = false
         level = .screenSaver
         isOpaque = false
         backgroundColor = .clear

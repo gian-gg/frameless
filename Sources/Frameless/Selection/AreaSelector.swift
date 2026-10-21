@@ -53,7 +53,6 @@ final class AreaSelector {
         }
         guard !windows.isEmpty else { return finish(nil) }
 
-        NSApp.activate()
         let mouse = NSEvent.mouseLocation
         let hovered = windows.first { $0.frame.contains(mouse) } ?? windows[0]
         hovered.overlay.isHovered = true

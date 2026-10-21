@@ -40,7 +40,6 @@ final class SelectionEditor {
         view.onFinish = { [weak self] choice in self?.finish(choice) }
         window.contentView = view
         window.makeFirstResponder(view)
-        NSApp.activate()
         window.orderFrontRegardless()
         window.makeKey()
         self.window = window

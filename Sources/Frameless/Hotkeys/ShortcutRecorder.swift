@@ -28,7 +28,6 @@ final class ShortcutRecorder {
             view.onFinish = { [weak self] outcome in self?.finish(outcome) }
             window.contentView = view
             window.makeFirstResponder(view)
-            NSApp.activate()
             window.fadeIn()
             window.makeKey()
             self.window = window
