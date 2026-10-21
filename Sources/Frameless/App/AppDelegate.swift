@@ -59,7 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quality", action: nil, keyEquivalent: "").submenu = makeQualityMenu()
         menu.addItem(withTitle: "Frame Rate", action: nil, keyEquivalent: "").submenu = choiceMenu(
-            FrameRate.allCases, title: \.title, action: #selector(selectFrameRate(_:)))
+            FrameRate.allCases, title: \.title, \.frameRate)
         menu.addItem(.separator())
         menu.addItem(withTitle: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
             .target = self
@@ -69,43 +69,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func makeQualityMenu() -> NSMenu {
         let menu = NSMenu()
         menu.addItem(.sectionHeader(title: "Codec"))
-        choiceItems(VideoCodec.allCases, title: \.title, action: #selector(selectCodec(_:))).forEach(menu.addItem)
+        choiceItems(VideoCodec.allCases, title: \.title, \.videoCodec).forEach(menu.addItem)
         menu.addItem(.separator())
         menu.addItem(.sectionHeader(title: "Resolution"))
-        choiceItems(Resolution.allCases, title: \.title, action: #selector(selectResolution(_:))).forEach(menu.addItem)
+        choiceItems(Resolution.allCases, title: \.title, \.resolution).forEach(menu.addItem)
         return menu
     }
 
-    private func choiceMenu<Choice>(_ choices: [Choice], title: (Choice) -> String, action: Selector) -> NSMenu {
+    private func choiceMenu<Choice: Equatable>(
+        _ choices: [Choice], title: (Choice) -> String, _ keyPath: ReferenceWritableKeyPath<Preferences, Choice>
+    ) -> NSMenu {
         let menu = NSMenu()
-        choiceItems(choices, title: title, action: action).forEach(menu.addItem)
+        choiceItems(choices, title: title, keyPath).forEach(menu.addItem)
         return menu
     }
 
-    private func choiceItems<Choice>(
-        _ choices: [Choice], title: (Choice) -> String, action: Selector
+    /// One checkable item per choice, each setting the preference to its value.
+    private func choiceItems<Choice: Equatable>(
+        _ choices: [Choice], title: (Choice) -> String, _ keyPath: ReferenceWritableKeyPath<Preferences, Choice>
     ) -> [NSMenuItem] {
         choices.map { choice in
-            let item = NSMenuItem(title: title(choice), action: action, keyEquivalent: "")
-            item.target = self
-            item.representedObject = choice
-            return item
+            preferenceItem(
+                title(choice),
+                PreferenceBinding(
+                    isOn: { $0[keyPath: keyPath] == choice },
+                    apply: { $0[keyPath: keyPath] = choice }))
         }
-    }
-
-    @objc private func selectResolution(_ sender: NSMenuItem) {
-        guard let resolution = sender.representedObject as? Resolution else { return }
-        preferences.resolution = resolution
-    }
-
-    @objc private func selectCodec(_ sender: NSMenuItem) {
-        guard let codec = sender.representedObject as? VideoCodec else { return }
-        preferences.videoCodec = codec
-    }
-
-    @objc private func selectFrameRate(_ sender: NSMenuItem) {
-        guard let frameRate = sender.representedObject as? FrameRate else { return }
-        preferences.frameRate = frameRate
     }
 
     @objc private func toggleLaunchAtLogin() {
@@ -118,17 +107,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func toggleItem(
         _ title: String, _ keyPath: ReferenceWritableKeyPath<Preferences, Bool>,
-        action: Selector = #selector(toggle(_:))
+        action: Selector = #selector(applyPreference(_:))
+    ) -> NSMenuItem {
+        preferenceItem(
+            title,
+            PreferenceBinding(isOn: { $0[keyPath: keyPath] }, apply: { $0[keyPath: keyPath].toggle() }),
+            action: action)
+    }
+
+    private func preferenceItem(
+        _ title: String, _ binding: PreferenceBinding, action: Selector = #selector(applyPreference(_:))
     ) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
-        item.representedObject = keyPath
+        item.representedObject = binding
         return item
     }
 
-    @objc private func toggle(_ sender: NSMenuItem) {
-        guard let keyPath = sender.representedObject as? ReferenceWritableKeyPath<Preferences, Bool> else { return }
-        preferences[keyPath: keyPath].toggle()
+    @objc private func applyPreference(_ sender: NSMenuItem) {
+        (sender.representedObject as? PreferenceBinding)?.apply(preferences)
     }
 
     @objc private func toggleMicrophone(_ sender: NSMenuItem) {
@@ -267,20 +264,8 @@ extension AppDelegate: NSMenuDelegate {
 
 extension AppDelegate: NSMenuItemValidation {
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-        if let keyPath = menuItem.representedObject as? ReferenceWritableKeyPath<Preferences, Bool> {
-            menuItem.state = preferences[keyPath: keyPath] ? .on : .off
-            return true
-        }
-        if let codec = menuItem.representedObject as? VideoCodec {
-            menuItem.state = preferences.videoCodec == codec ? .on : .off
-            return true
-        }
-        if let frameRate = menuItem.representedObject as? FrameRate {
-            menuItem.state = preferences.frameRate == frameRate ? .on : .off
-            return true
-        }
-        if let resolution = menuItem.representedObject as? Resolution {
-            menuItem.state = preferences.resolution == resolution ? .on : .off
+        if let binding = menuItem.representedObject as? PreferenceBinding {
+            menuItem.state = binding.isOn(preferences) ? .on : .off
             return true
         }
         if menuItem.action == #selector(toggleLaunchAtLogin) {
