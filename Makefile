@@ -6,7 +6,8 @@ SIGN_ID ?= $(shell security find-identity -v -p codesigning | grep -q '"Frameles
 ifeq ($(shell xcode-select -p),/Library/Developer/CommandLineTools)
 export TOOLCHAIN_DIR := /Library/Developer/CommandLineTools
 TESTING_FW := $(TOOLCHAIN_DIR)/Library/Developer/Frameworks
-TEST_FLAGS := -Xswiftc -F -Xswiftc $(TESTING_FW) -Xlinker -rpath -Xlinker $(TESTING_FW)
+TEST_FLAGS := -Xswiftc -F -Xswiftc $(TESTING_FW) -Xlinker -rpath -Xlinker $(TESTING_FW) \
+	-Xswiftc -Xfrontend -Xswiftc -disable-cross-import-overlays
 endif
 
 .PHONY: build app run clean format lint typecheck test check hooks
