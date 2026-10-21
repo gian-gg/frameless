@@ -16,7 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let selector = AreaSelector()
     private let outline = AreaOutline()
     private let thumbnail = CaptureThumbnail()
-    private let belt = CaptureBelt()
+    private let editor = SelectionEditor()
     private var recordingScreen: NSScreen?
     private var state = State.idle
     private var statusItem: NSStatusItem?
@@ -173,8 +173,13 @@ extension AppDelegate {
         }
         state = .busy
         Task {
-            guard let selection = await selector.select(for: .recording) else { return showIdle() }
-            selector.dismiss()
+            guard let picked = await selector.select(for: .recording) else { return showIdle() }
+            defer { selector.dismiss() }
+            guard
+                let choice = await editor.present(
+                    picked, for: .recording, onShown: { [selector] in selector.dismiss() })
+            else { return showIdle() }
+            let selection = choice.selection
             do {
                 let url = try RecordingFile.directory().appending(path: RecordingFile.name(for: .now))
                 try await recorder.start(selection, options: preferences.recordingOptions, to: url)
@@ -272,7 +277,10 @@ extension AppDelegate {
             defer { showIdle() }
             guard let selection = await selector.select(for: .screenshot) else { return }
             defer { selector.dismiss() }
-            guard let choice = await belt.present(selection, onShown: { [selector] in selector.dismiss() }) else {
+            guard
+                let choice = await editor.present(
+                    selection, for: .screenshot, onShown: { [selector] in selector.dismiss() })
+            else {
                 return
             }
             do {
@@ -285,6 +293,8 @@ extension AppDelegate {
                     let url = try Screenshotter.save(shot)
                     playSound(.screenshot)
                     thumbnail.show(url, on: NSScreen.screens.first { $0.displayID == shot.displayID })
+                case .record:
+                    break
                 }
             } catch let error as SCStreamError where error.code == .userDeclined {
                 selector.dismiss()

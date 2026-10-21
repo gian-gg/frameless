@@ -1,12 +1,14 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// After picking, keeps the selection on screen to resize or move, with Copy / Save / Close; nothing is captured yet.
+/// After picking, keeps the selection on screen to resize or move until it's confirmed: Copy or Save for a
+/// screenshot, Record for a recording. Nothing is captured until then.
 @MainActor
-final class CaptureBelt {
+final class SelectionEditor {
     enum Action {
         case copy
         case save
+        case record
     }
 
     /// The chosen action and the selection as it was when it was chosen.
@@ -19,20 +21,22 @@ final class CaptureBelt {
     private var continuation: CheckedContinuation<Choice?, Never>?
 
     /// Shows the selection on its screen, calls `onShown` once it's up; returns the choice, or nil when closed.
-    func present(_ selection: CaptureSelection, onShown: @MainActor () -> Void = {}) async -> Choice? {
+    func present(
+        _ selection: CaptureSelection, for purpose: CapturePurpose, onShown: @MainActor () -> Void = {}
+    ) async -> Choice? {
         guard continuation == nil,
             let screen = NSScreen.screens.first(where: { $0.displayID == selection.displayID })
         else { return nil }
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
-            show(selection, on: screen)
+            show(selection, for: purpose, on: screen)
             onShown()
         }
     }
 
-    private func show(_ selection: CaptureSelection, on screen: NSScreen) {
+    private func show(_ selection: CaptureSelection, for purpose: CapturePurpose, on screen: NSScreen) {
         let window = ScreenCoverWindow(screen: screen)
-        let view = BeltView(selection: selection, scale: screen.backingScaleFactor)
+        let view = SelectionEditorView(selection: selection, purpose: purpose, scale: screen.backingScaleFactor)
         view.onFinish = { [weak self] choice in self?.finish(choice) }
         window.contentView = view
         window.makeFirstResponder(view)
@@ -51,12 +55,13 @@ final class CaptureBelt {
 }
 
 /// The dimmed screen with the live selection, its size tag and the bar; resizes, moves, and handles the keys.
-private final class BeltView: NSView {
+private final class SelectionEditorView: NSView {
     private static let grabTolerance: CGFloat = 8
 
-    var onFinish: (@MainActor (CaptureBelt.Choice?) -> Void)?
+    var onFinish: (@MainActor (SelectionEditor.Choice?) -> Void)?
 
     private let selection: CaptureSelection
+    private let purpose: CapturePurpose
     private let scale: CGFloat
     /// The selection in this screen's local points; fixed for a window, editable otherwise.
     private var rect: CGRect
@@ -71,21 +76,14 @@ private final class BeltView: NSView {
         let startRect: CGRect
     }
 
-    init(selection: CaptureSelection, scale: CGFloat) {
+    init(selection: CaptureSelection, purpose: CapturePurpose, scale: CGFloat) {
         self.selection = selection
+        self.purpose = purpose
         self.scale = scale
         rect = Self.localRect(for: selection)
         super.init(frame: .zero)
         let toolbar = GlassBar(
-            items: [
-                .init(
-                    symbol: "doc.on.doc", title: "Copy", shortcut: .text("⌘C"), toolTip: "Copy to the clipboard",
-                    perform: { [weak self] in self?.choose(.copy) }),
-                .init(
-                    symbol: "square.and.arrow.down", title: "Save", shortcut: .text("⌘S"), toolTip: "Save to Pictures",
-                    perform: { [weak self] in self?.choose(.save) }),
-            ],
-            closeToolTip: "Close (Esc)", close: { [weak self] in self?.onFinish?(nil) })
+            items: barItems(), closeToolTip: "Close (Esc)", close: { [weak self] in self?.onFinish?(nil) })
         addSubview(toolbar)
         self.toolbar = toolbar
         addSubview(sizeTag)
@@ -127,8 +125,29 @@ private final class BeltView: NSView {
             target: isWholeScreen ? .display : .area(rect))
     }
 
-    private func choose(_ action: CaptureBelt.Action) {
-        onFinish?(CaptureBelt.Choice(action: action, selection: finalSelection))
+    /// Copy and Save for a screenshot; Record for a recording.
+    private func barItems() -> [GlassBar.Item] {
+        switch purpose {
+        case .screenshot:
+            [
+                .init(
+                    symbol: "doc.on.doc", title: "Copy", shortcut: .text("⌘C"), toolTip: "Copy to the clipboard",
+                    perform: { [weak self] in self?.choose(.copy) }),
+                .init(
+                    symbol: "square.and.arrow.down", title: "Save", shortcut: .text("⌘S"), toolTip: "Save to Pictures",
+                    perform: { [weak self] in self?.choose(.save) }),
+            ]
+        case .recording:
+            [
+                .init(
+                    symbol: Config.StatusItem.recordingSymbolName, title: "Record", shortcut: .text("↩"),
+                    toolTip: "Start recording", perform: { [weak self] in self?.choose(.record) })
+            ]
+        }
+    }
+
+    private func choose(_ action: SelectionEditor.Action) {
+        onFinish?(SelectionEditor.Choice(action: action, selection: finalSelection))
     }
 
     private func updateTag() {
@@ -221,13 +240,13 @@ private final class BeltView: NSView {
     override func keyDown(with event: NSEvent) {
         switch Int(event.keyCode) {
         case kVK_Escape: onFinish?(nil)
-        case kVK_Return, kVK_ANSI_KeypadEnter: choose(.copy)
+        case kVK_Return, kVK_ANSI_KeypadEnter: choose(purpose == .screenshot ? .copy : .record)
         default: super.keyDown(with: event)
         }
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command else {
+        guard purpose == .screenshot, event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command else {
             return super.performKeyEquivalent(with: event)
         }
         switch Int(event.keyCode) {

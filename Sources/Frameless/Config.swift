@@ -42,7 +42,7 @@ enum Config {
         static let thumbnailFadeDuration: TimeInterval = 0.2
     }
 
-    /// The shared look: corners, dims, panels and fades used across the picker, belt and thumbnail.
+    /// The shared look: corners, dims, panels and fades used across the picker, selection editor and thumbnail.
     enum Style {
         /// Rounding for non-capsule surfaces such as the thumbnail; bars and tags are full capsules.
         static let cornerRadius: CGFloat = 12
@@ -56,11 +56,11 @@ enum Config {
         /// Gap between a selection's top edge and its size tag.
         static let tagLift: CGFloat = 8
         static let fadeDuration: TimeInterval = 0.12
-        /// Distance from the screen's bottom edge to the hint bar and the belt.
+        /// Distance from the screen's bottom edge to the picker's bar.
         static let barBottomOffset: CGFloat = 56
     }
 
-    /// Glass bars at the bottom of the screen: the picker's and the belt's.
+    /// Glass bars at the bottom of the screen: the picker's and the selection editor's.
     enum Bar {
         /// Height of one item; the capsule adds `padding` around it.
         static let itemHeight: CGFloat = 26
@@ -71,7 +71,7 @@ enum Config {
         static let padding: CGFloat = 4
         /// Space between the capsule and the round close button.
         static let closeGap: CGFloat = 8
-        /// Space between a capture and the belt under it.
+        /// Space between a selection and the editor's bar under it.
         static let selectionGap: CGFloat = 10
         static let iconSize: CGFloat = 12
         static let titleSize: CGFloat = 12

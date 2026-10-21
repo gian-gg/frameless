@@ -1,6 +1,6 @@
 import AppKit
 
-/// Borderless, key-capable window covering one screen above everything, used by the picker and the belt.
+/// Borderless, key-capable window covering one screen above everything, used by the picker and the selection editor.
 class ScreenCoverWindow: NSWindow {
     init(screen: NSScreen) {
         super.init(contentRect: screen.frame, styleMask: .borderless, backing: .buffered, defer: false)
