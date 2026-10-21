@@ -11,6 +11,7 @@ enum Config {
         static let videoCodec: AVVideoCodecType = .h264
         static let showsCursor = true
         static let capturesSystemAudio = true
+        static let capturesMicrophone = false
     }
 
     /// Where recordings are saved and how they are named.
@@ -53,5 +54,7 @@ enum Config {
     enum Links {
         static let screenRecordingSettings = URL(
             string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
+        static let microphoneSettings = URL(
+            string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
     }
 }

@@ -1,3 +1,4 @@
+import AVFoundation
 import AppKit
 import ScreenCaptureKit
 
@@ -8,6 +9,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case idle
         case busy
         case recording(since: Date)
+    }
+
+    private enum Permission {
+        case screenRecording
+        case microphone
+
+        var name: String {
+            switch self {
+            case .screenRecording: "Screen Recording"
+            case .microphone: "Microphone"
+            }
+        }
+
+        var settingsPane: String {
+            switch self {
+            case .screenRecording: "Screen & System Audio Recording"
+            case .microphone: "Microphone"
+            }
+        }
+
+        var settingsURL: URL? {
+            switch self {
+            case .screenRecording: Config.Links.screenRecordingSettings
+            case .microphone: Config.Links.microphoneSettings
+            }
+        }
     }
 
     private let preferences = Preferences()
@@ -42,12 +69,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func makePreferencesMenu() -> NSMenu {
         let menu = NSMenu()
         menu.addItem(toggleItem("System Audio", \.capturesSystemAudio))
+        menu.addItem(toggleItem("Microphone", \.capturesMicrophone, action: #selector(toggleMicrophone(_:))))
         menu.addItem(toggleItem("Show Cursor", \.showsCursor))
         return menu
     }
 
-    private func toggleItem(_ title: String, _ keyPath: ReferenceWritableKeyPath<Preferences, Bool>) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: #selector(toggle(_:)), keyEquivalent: "")
+    private func toggleItem(
+        _ title: String, _ keyPath: ReferenceWritableKeyPath<Preferences, Bool>,
+        action: Selector = #selector(toggle(_:))
+    ) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
         item.representedObject = keyPath
         return item
@@ -58,10 +89,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         preferences[keyPath: keyPath].toggle()
     }
 
+    @objc private func toggleMicrophone(_ sender: NSMenuItem) {
+        guard !preferences.capturesMicrophone else {
+            preferences.capturesMicrophone = false
+            return
+        }
+        Task {
+            guard await AVCaptureDevice.requestAccess(for: .audio) else { return showPermissionAlert(.microphone) }
+            preferences.capturesMicrophone = true
+        }
+    }
+
     @objc private func startRecording() {
         guard case .idle = state else { return }
         guard CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() else {
-            showPermissionAlert()
+            showPermissionAlert(.screenRecording)
+            return
+        }
+        if preferences.capturesMicrophone, AVCaptureDevice.authorizationStatus(for: .audio) != .authorized {
+            preferences.capturesMicrophone = false
+            showPermissionAlert(.microphone)
             return
         }
         state = .busy
@@ -74,7 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 showRecording(since: .now)
             } catch let error as SCStreamError where error.code == .userDeclined {
                 showIdle()
-                showPermissionAlert()
+                showPermissionAlert(.screenRecording)
             } catch {
                 showIdle()
                 showError("Couldn't start recording", error)
@@ -148,16 +195,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.runModal()
     }
 
-    private func showPermissionAlert() {
+    private func showPermissionAlert(_ permission: Permission) {
         let alert = NSAlert()
-        alert.messageText = "Frameless needs Screen Recording permission"
+        alert.messageText = "Frameless needs \(permission.name) permission"
         alert.informativeText =
-            "Turn on Frameless in System Settings › Privacy & Security › Screen & System Audio "
-            + "Recording, then try again."
+            "Turn on Frameless in System Settings › Privacy & Security › \(permission.settingsPane), then try again."
         alert.addButton(withTitle: "Open System Settings")
         alert.addButton(withTitle: "Cancel")
         NSApp.activate()
-        if alert.runModal() == .alertFirstButtonReturn, let url = Config.Links.screenRecordingSettings {
+        if alert.runModal() == .alertFirstButtonReturn, let url = permission.settingsURL {
             NSWorkspace.shared.open(url)
         }
     }

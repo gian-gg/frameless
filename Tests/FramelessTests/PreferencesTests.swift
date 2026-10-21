@@ -26,9 +26,11 @@ struct PreferencesTests {
 
         let preferences = Preferences(defaults: defaults)
         preferences.capturesSystemAudio = false
+        preferences.capturesMicrophone = true
         preferences.showsCursor = false
 
         let reloaded = Preferences(defaults: defaults).recordingOptions
-        #expect(reloaded == RecordingOptions(capturesSystemAudio: false, showsCursor: false))
+        #expect(
+            reloaded == RecordingOptions(capturesSystemAudio: false, capturesMicrophone: true, showsCursor: false))
     }
 }

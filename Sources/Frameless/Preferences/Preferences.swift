@@ -5,6 +5,7 @@ import Foundation
 final class Preferences {
     private enum Key {
         static let capturesSystemAudio = "capturesSystemAudio"
+        static let capturesMicrophone = "capturesMicrophone"
         static let showsCursor = "showsCursor"
     }
 
@@ -14,6 +15,7 @@ final class Preferences {
         self.defaults = defaults
         defaults.register(defaults: [
             Key.capturesSystemAudio: Config.Recording.capturesSystemAudio,
+            Key.capturesMicrophone: Config.Recording.capturesMicrophone,
             Key.showsCursor: Config.Recording.showsCursor,
         ])
     }
@@ -23,12 +25,18 @@ final class Preferences {
         set { defaults.set(newValue, forKey: Key.capturesSystemAudio) }
     }
 
+    var capturesMicrophone: Bool {
+        get { defaults.bool(forKey: Key.capturesMicrophone) }
+        set { defaults.set(newValue, forKey: Key.capturesMicrophone) }
+    }
+
     var showsCursor: Bool {
         get { defaults.bool(forKey: Key.showsCursor) }
         set { defaults.set(newValue, forKey: Key.showsCursor) }
     }
 
     var recordingOptions: RecordingOptions {
-        RecordingOptions(capturesSystemAudio: capturesSystemAudio, showsCursor: showsCursor)
+        RecordingOptions(
+            capturesSystemAudio: capturesSystemAudio, capturesMicrophone: capturesMicrophone, showsCursor: showsCursor)
     }
 }

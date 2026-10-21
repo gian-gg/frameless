@@ -11,6 +11,5 @@ opt_in_rules:
   - implicitly_unwrapped_optional
   - empty_count
   - first_where
-  - sorted_imports
 
 line_length: 120
