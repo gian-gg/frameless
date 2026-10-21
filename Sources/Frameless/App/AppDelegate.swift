@@ -43,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func makeMenu() -> NSMenu {
         let menu = NSMenu()
+        menu.addItem(withTitle: "Take Screenshot", action: #selector(takeScreenshot), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Record Screen", action: #selector(startRecording), keyEquivalent: "").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "Preferences", action: nil, keyEquivalent: "").submenu = makePreferencesMenu()
@@ -139,12 +140,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc private func startRecording() {
-        guard case .idle = state else { return }
+    /// Captures the display under the cursor, the one whose menu bar was just clicked.
+    @objc private func takeScreenshot() {
+        guard case .idle = state, hasScreenRecordingAccess() else { return }
+        let mouse = NSEvent.mouseLocation
+        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(mouse) }) ?? NSScreen.main,
+            let displayID = screen.displayID
+        else { return }
+        let selection = CaptureSelection(displayID: displayID, screenFrame: screen.frame, target: .display)
+        state = .busy
+        Task {
+            defer { showIdle() }
+            do {
+                _ = try await Screenshotter.capture(selection)
+            } catch let error as SCStreamError where error.code == .userDeclined {
+                showPermissionAlert(.screenRecording)
+            } catch {
+                showError("Couldn't take screenshot", error)
+            }
+        }
+    }
+
+    private func hasScreenRecordingAccess() -> Bool {
         guard CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() else {
             showPermissionAlert(.screenRecording)
-            return
+            return false
         }
+        return true
+    }
+
+    @objc private func startRecording() {
+        guard case .idle = state, hasScreenRecordingAccess() else { return }
         if preferences.capturesMicrophone, AVCaptureDevice.authorizationStatus(for: .audio) != .authorized {
             preferences.capturesMicrophone = false
             showPermissionAlert(.microphone)
@@ -274,7 +300,9 @@ extension AppDelegate: NSMenuItemValidation {
             menuItem.state = LaunchAtLogin.isEnabled ? .on : .off
             return true
         }
-        guard menuItem.action == #selector(startRecording) else { return true }
+        guard menuItem.action == #selector(startRecording) || menuItem.action == #selector(takeScreenshot) else {
+            return true
+        }
         if case .idle = state { return true }
         return false
     }
