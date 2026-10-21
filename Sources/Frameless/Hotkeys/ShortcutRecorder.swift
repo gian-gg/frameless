@@ -14,7 +14,8 @@ final class ShortcutRecorder {
     private var continuation: CheckedContinuation<Outcome, Never>?
 
     /// Shows the prompt on the screen under the pointer and returns what the user did.
-    func record(for actionName: String) async -> Outcome {
+    /// `reasonToReject` explains why a combination can't be used, or returns nil to accept it.
+    func record(for actionName: String, reasonToReject: @escaping @MainActor (Shortcut) -> String?) async -> Outcome {
         guard continuation == nil else { return .cancel }
         let mouse = NSEvent.mouseLocation
         guard let screen = NSScreen.screens.first(where: { $0.frame.contains(mouse) }) ?? NSScreen.main else {
@@ -23,7 +24,7 @@ final class ShortcutRecorder {
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
             let window = ScreenCoverWindow(screen: screen)
-            let view = ShortcutRecorderView(actionName: actionName)
+            let view = ShortcutRecorderView(actionName: actionName, reasonToReject: reasonToReject)
             view.onFinish = { [weak self] outcome in self?.finish(outcome) }
             window.contentView = view
             window.makeFirstResponder(view)
@@ -42,13 +43,15 @@ final class ShortcutRecorder {
     }
 }
 
-/// Dim with a centred glass prompt; turns the next valid key combination into a shortcut.
+/// Dim with a centred glass prompt; turns the next accepted key combination into a shortcut.
 private final class ShortcutRecorderView: NSView {
     var onFinish: (@MainActor (ShortcutRecorder.Outcome) -> Void)?
 
     private let prompt = GlassTag()
+    private let reasonToReject: @MainActor (Shortcut) -> String?
 
-    init(actionName: String) {
+    init(actionName: String, reasonToReject: @escaping @MainActor (Shortcut) -> String?) {
+        self.reasonToReject = reasonToReject
         super.init(frame: .zero)
         prompt.show("Press a shortcut for \(actionName)   ⌫ Clear   esc Cancel")
         addSubview(prompt)
@@ -86,7 +89,7 @@ private final class ShortcutRecorderView: NSView {
         return true
     }
 
-    /// Esc cancels and Delete clears when pressed alone; any other valid combination becomes the shortcut.
+    /// Esc cancels and Delete clears when pressed alone; a rejected combination shows why and keeps listening.
     private func handle(_ event: NSEvent) {
         let modifiers = Shortcut.Modifiers(event.modifierFlags)
         let keyCode = Int(event.keyCode)
@@ -95,7 +98,11 @@ private final class ShortcutRecorderView: NSView {
             return onFinish?(.clear) ?? ()
         }
         let shortcut = Shortcut(keyCode: UInt32(event.keyCode), modifiers: modifiers)
-        guard shortcut.problem == nil else { return }
+        if let reason = reasonToReject(shortcut) {
+            prompt.show("\(reason). Try another   esc Cancel")
+            needsLayout = true
+            return
+        }
         onFinish?(.set(shortcut))
     }
 }

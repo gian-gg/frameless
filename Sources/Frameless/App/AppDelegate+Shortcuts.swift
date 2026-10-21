@@ -22,10 +22,37 @@ extension AppDelegate {
         return menu
     }
 
-    func registerShortcuts() {
-        for action in Hotkeys.Action.allCases {
-            hotkeys.set(preferences.shortcut(for: action), for: action)
+    /// Registers every saved shortcut; returns the actions whose shortcut macOS refused.
+    @discardableResult
+    func registerShortcuts() -> [Hotkeys.Action] {
+        Hotkeys.Action.allCases.filter { !hotkeys.set(preferences.shortcut(for: $0), for: $0) }
+    }
+
+    /// At launch: says which saved shortcuts another app has taken, and where to change them.
+    func reportUnavailableShortcuts(_ actions: [Hotkeys.Action]) {
+        guard !actions.isEmpty else { return }
+        let list = actions.map {
+            "\(preferences.shortcut(for: $0)?.displayString ?? "") (\(Self.shortcutNames[$0] ?? ""))"
         }
+        let alert = NSAlert()
+        alert.messageText = "Some Frameless shortcuts are in use by another app"
+        alert.informativeText =
+            "\(list.joined(separator: ", ")) won't work. Pick different ones in Preferences ▸ Shortcuts."
+        NSApp.activate()
+        alert.runModal()
+    }
+
+    /// Why a shortcut can't be used for an action: the basic rules, the other action, then other apps.
+    private func reasonToReject(_ shortcut: Shortcut, for action: Hotkeys.Action) -> String? {
+        if let problem = shortcut.problemDescription { return problem }
+        if let other = Hotkeys.Action.allCases.first(where: {
+            $0 != action && preferences.shortcut(for: $0) == shortcut
+        }) {
+            return "\(shortcut.displayString) is already \(Self.shortcutNames[other] ?? "taken")"
+        }
+        let isFree = hotkeys.set(shortcut, for: action)
+        hotkeys.set(nil, for: action)
+        return isFree ? nil : "\(shortcut.displayString) is used by another app"
     }
 
     /// Records a new shortcut with the global ones paused, so pressing one assigns it instead of triggering it.
@@ -34,7 +61,10 @@ extension AppDelegate {
         state = .busy
         for action in Hotkeys.Action.allCases { hotkeys.set(nil, for: action) }
         Task {
-            switch await shortcutRecorder.record(for: Self.shortcutNames[action] ?? "") {
+            let outcome = await shortcutRecorder.record(for: Self.shortcutNames[action] ?? "") { [weak self] shortcut in
+                self?.reasonToReject(shortcut, for: action)
+            }
+            switch outcome {
             case .set(let shortcut): preferences.setShortcut(shortcut, for: action)
             case .clear: preferences.setShortcut(nil, for: action)
             case .cancel: break

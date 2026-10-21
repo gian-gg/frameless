@@ -33,8 +33,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         buildRecordingMenu()
         recorder.onEndedEarly = { [weak self] end in self?.recordingEndedEarly(end) }
         hotkeys.onPress = { [weak self] action in self?.hotkeyPressed(action) }
-        registerShortcuts()
+        let unavailable = registerShortcuts()
         showIdle()
+        reportUnavailableShortcuts(unavailable)
     }
 
     /// Screenshot opens the picker; record starts one, or stops and saves while recording.

@@ -66,13 +66,22 @@ struct Shortcut: Codable, Equatable, Sendable {
         return nil
     }
 
+    /// A short reason this can't be used, for the shortcut prompt; nil when it can.
+    @MainActor var problemDescription: String? {
+        switch problem {
+        case .needsModifier: "Add ⌘, ⌃ or ⌥"
+        case .reservedBySystem: "\(displayString) belongs to macOS"
+        case nil: nil
+        }
+    }
+
     /// Modifiers then key, e.g. "⇧⌘2", with the key named by the current keyboard layout.
-    var displayString: String {
+    @MainActor var displayString: String {
         modifiers.symbols + Self.keyName(for: keyCode)
     }
 
     /// The key as an `NSMenuItem` key equivalent, so a menu shows the shortcut; nil when it has no character.
-    var menuKeyEquivalent: String? {
+    @MainActor var menuKeyEquivalent: String? {
         if let special = Self.menuSpecialKeys[Int(keyCode)] { return special }
         return Self.layoutCharacter(for: keyCode)?.lowercased()
     }
@@ -114,12 +123,13 @@ struct Shortcut: Codable, Equatable, Sendable {
     ]
 
     /// A key's name: a symbol for special keys, otherwise what the current layout types for it, uppercased.
-    static func keyName(for keyCode: UInt32) -> String {
+    @MainActor static func keyName(for keyCode: UInt32) -> String {
         if let name = namedKeys[Int(keyCode)] { return name }
         return layoutCharacter(for: keyCode)?.uppercased() ?? "#\(keyCode)"
     }
 
-    private static func layoutCharacter(for keyCode: UInt32) -> String? {
+    /// Keyboard layout lookups are only safe on the main thread.
+    @MainActor private static func layoutCharacter(for keyCode: UInt32) -> String? {
         guard let source = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
             let pointer = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData)
         else { return nil }

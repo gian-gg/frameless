@@ -5,6 +5,7 @@ import Testing
 
 @testable import Frameless
 
+@MainActor
 struct ShortcutTests {
     private func shortcut(_ keyCode: Int, _ modifiers: Shortcut.Modifiers) -> Shortcut {
         Shortcut(keyCode: UInt32(keyCode), modifiers: modifiers)
@@ -27,6 +28,13 @@ struct ShortcutTests {
     func rejectsSystemScreenshots(keyCode: Int) {
         #expect(shortcut(keyCode, [.shift, .command]).problem == .reservedBySystem)
         #expect(shortcut(keyCode, [.control, .shift, .command]).problem == nil)
+    }
+
+    @Test("explains why a shortcut can't be used")
+    func describesProblems() {
+        #expect(shortcut(kVK_ANSI_A, [.shift]).problemDescription == "Add ⌘, ⌃ or ⌥")
+        #expect(shortcut(kVK_ANSI_3, [.shift, .command]).problemDescription?.hasSuffix("belongs to macOS") == true)
+        #expect(shortcut(kVK_Return, [.command]).problemDescription == nil)
     }
 
     @Test("orders modifier symbols like macOS and names special keys")
