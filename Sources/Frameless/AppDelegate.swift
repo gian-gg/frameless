@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let recorder = Recorder()
     private let selector = AreaSelector()
+    private let outline = AreaOutline()
     private var state = State.idle
     private var statusItem: NSStatusItem?
     private var menu: NSMenu?
@@ -50,6 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 let url = try RecordingFile.directory().appending(path: RecordingFile.name(for: .now))
                 try await recorder.start(selection, to: url)
+                if let area = selection.globalArea { outline.show(around: area) }
                 showRecording(since: .now)
             } catch let error as SCStreamError where error.code == .userDeclined {
                 showIdle()
@@ -66,6 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         state = .busy
         timer?.invalidate()
         timer = nil
+        outline.hide()
         Task {
             do {
                 let url = try await recorder.stop()
@@ -83,6 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         state = .idle
         timer?.invalidate()
         timer = nil
+        outline.hide()
         guard let statusItem, let button = statusItem.button else { return }
         button.attributedTitle = NSAttributedString()
         button.image = NSImage(systemSymbolName: "record.circle", accessibilityDescription: "Frameless")

@@ -1,6 +1,6 @@
 import ScreenCaptureKit
 
-/// Records a chosen display, with system audio, to disk via SCRecordingOutput.
+/// Records a display or an area of it, with system audio, to disk via SCRecordingOutput.
 @MainActor
 final class Recorder: NSObject {
     enum RecorderError: Error {
@@ -23,7 +23,7 @@ final class Recorder: NSObject {
         }
         let ownApps = content.applications.filter { $0.bundleIdentifier == Bundle.main.bundleIdentifier }
         let filter = SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: [])
-        let config = Self.configuration(for: filter)
+        let config = Self.configuration(for: filter, area: selection.area)
 
         let stream = SCStream(filter: filter, configuration: config, delegate: self)
         let output = SCRecordingOutput(configuration: Self.outputConfiguration(to: url), delegate: self)
@@ -49,11 +49,19 @@ final class Recorder: NSObject {
         return outputURL
     }
 
-    private static func configuration(for filter: SCContentFilter) -> SCStreamConfiguration {
+    private static func configuration(for filter: SCContentFilter, area: CGRect?) -> SCStreamConfiguration {
         let config = SCStreamConfiguration()
-        let size = ScreenGeometry.evenPixelSize(filter.contentRect.size, scale: CGFloat(filter.pointPixelScale))
-        config.width = size.width
-        config.height = size.height
+        let scale = CGFloat(filter.pointPixelScale)
+        let screenSize = filter.contentRect.size
+        if let area, let capture = ScreenGeometry.captureArea(fromLocal: area, screenSize: screenSize, scale: scale) {
+            config.sourceRect = capture.sourceRect
+            config.width = capture.width
+            config.height = capture.height
+        } else {
+            let size = ScreenGeometry.evenPixelSize(screenSize, scale: scale)
+            config.width = size.width
+            config.height = size.height
+        }
         config.captureResolution = .best
         config.minimumFrameInterval = CMTime(value: 1, timescale: 60)
         config.showsCursor = true

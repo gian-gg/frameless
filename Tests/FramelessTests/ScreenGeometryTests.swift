@@ -4,6 +4,38 @@ import Testing
 @testable import Frameless
 
 struct ScreenGeometryTests {
+    private let screen = CGSize(width: 1000, height: 800)
+
+    @Test("flips a bottom-left rect to top-left display points")
+    func flipsToTopLeft() {
+        let area = ScreenGeometry.captureArea(
+            fromLocal: CGRect(x: 100, y: 100, width: 200, height: 100), screenSize: screen, scale: 1)
+        #expect(area == .init(sourceRect: CGRect(x: 100, y: 600, width: 200, height: 100), width: 200, height: 100))
+    }
+
+    @Test("clamps a rect that hangs off the screen edge")
+    func clampsToScreen() {
+        let area = ScreenGeometry.captureArea(
+            fromLocal: CGRect(x: -50, y: 700, width: 200, height: 200), screenSize: screen, scale: 1)
+        #expect(area == .init(sourceRect: CGRect(x: 0, y: 0, width: 150, height: 100), width: 150, height: 100))
+    }
+
+    @Test("returns nil for a rect entirely off the screen")
+    func offScreenIsNil() {
+        let area = ScreenGeometry.captureArea(
+            fromLocal: CGRect(x: 1200, y: 0, width: 100, height: 100), screenSize: screen, scale: 1)
+        #expect(area == nil)
+    }
+
+    @Test("aligns to whole pixels and even dimensions on Retina")
+    func alignsOnRetina() {
+        let area = ScreenGeometry.captureArea(
+            fromLocal: CGRect(x: 10.25, y: 0, width: 100.75, height: 50.3), screenSize: screen, scale: 2)
+        #expect(area?.width == 200)
+        #expect(area?.height == 100)
+        #expect(area?.sourceRect == CGRect(x: 10, y: 749.5, width: 100, height: 50))
+    }
+
     @Test(
         "rounds pixel sizes down to even numbers",
         arguments: [
