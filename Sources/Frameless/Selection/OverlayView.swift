@@ -23,8 +23,6 @@ final class OverlayView: NSView {
     }
 
     private enum Layout {
-        static let labelPadding = CGSize(width: 10, height: 4)
-        static let labelGap: CGFloat = 6
         static let hoverBorderWidth: CGFloat = 4
     }
 
@@ -181,7 +179,7 @@ final class OverlayView: NSView {
         bounds.fill()
         reveal(rect)
         let size = ScreenGeometry.evenPixelSize(rect.size, scale: scale)
-        drawLabel("\(size.width) × \(size.height)", above: rect)
+        OverlayDrawing.drawLabel("\(size.width) × \(size.height)", above: rect, in: bounds)
     }
 
     private func drawWindowMode() {
@@ -196,7 +194,8 @@ final class OverlayView: NSView {
         guard !local.isNull, !local.isEmpty else { return }
         reveal(local)
         let size = ScreenGeometry.evenPixelSize(highlightedWindow.frame.size, scale: scale)
-        drawLabel("\(highlightedWindow.displayName)   \(size.width) × \(size.height)", above: local)
+        OverlayDrawing.drawLabel(
+            "\(highlightedWindow.displayName)   \(size.width) × \(size.height)", above: local, in: bounds)
     }
 
     /// Clears the dim over a rect and outlines it in white on a dark hairline.
@@ -204,22 +203,5 @@ final class OverlayView: NSView {
         NSColor.clear.setFill()
         rect.fill(using: .copy)
         OverlayDrawing.strokeSelection(rect)
-    }
-
-    /// Draws a pill label above a rect's top-left corner, or inside it at the top edge of the screen.
-    private func drawLabel(_ string: String, above rect: CGRect) {
-        let label = OverlayDrawing.text(string, size: 12, weight: .medium, monospaced: true)
-        let textSize = label.size()
-        let pill = CGSize(
-            width: ceil(textSize.width) + Layout.labelPadding.width * 2,
-            height: ceil(textSize.height) + Layout.labelPadding.height * 2)
-        var origin = CGPoint(x: rect.minX, y: rect.maxY + Layout.labelGap)
-        if origin.y + pill.height > bounds.maxY {
-            origin.y = rect.maxY - pill.height - Layout.labelGap
-            origin.x += Layout.labelGap
-        }
-        origin.x = min(max(origin.x, bounds.minX), bounds.maxX - pill.width)
-        OverlayDrawing.fillPill(CGRect(origin: origin, size: pill))
-        label.draw(at: CGPoint(x: origin.x + Layout.labelPadding.width, y: origin.y + Layout.labelPadding.height))
     }
 }

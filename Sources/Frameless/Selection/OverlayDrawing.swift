@@ -37,6 +37,26 @@ enum OverlayDrawing {
         inner.stroke()
     }
 
+    private static let labelPadding = CGSize(width: 10, height: 4)
+    private static let labelGap: CGFloat = 6
+
+    /// Draws a label above a rect's top-left corner, or inside it at the top edge of the screen.
+    static func drawLabel(_ string: String, above rect: CGRect, in bounds: CGRect, radius: CGFloat = pillRadius) {
+        let label = text(string, size: 12, weight: .medium, monospaced: true)
+        let textSize = label.size()
+        let pill = CGSize(
+            width: ceil(textSize.width) + labelPadding.width * 2,
+            height: ceil(textSize.height) + labelPadding.height * 2)
+        var origin = CGPoint(x: rect.minX, y: rect.maxY + labelGap)
+        if origin.y + pill.height > bounds.maxY {
+            origin.y = rect.maxY - pill.height - labelGap
+            origin.x += labelGap
+        }
+        origin.x = min(max(origin.x, bounds.minX), bounds.maxX - pill.width)
+        fillPill(CGRect(origin: origin, size: pill), radius: radius)
+        label.draw(at: CGPoint(x: origin.x + labelPadding.width, y: origin.y + labelPadding.height))
+    }
+
     /// Dark translucent rounded background with a hairline edge.
     static func fillPill(_ frame: CGRect, radius: CGFloat = pillRadius) {
         let shape = NSBezierPath(roundedRect: frame, xRadius: radius, yRadius: radius)

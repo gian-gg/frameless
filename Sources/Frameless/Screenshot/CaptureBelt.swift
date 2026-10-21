@@ -80,6 +80,8 @@ private final class BeltView: NSView {
         imageFrame.fill(using: .copy)
         NSGraphicsContext.current?.cgContext.draw(image, in: imageFrame)
         OverlayDrawing.strokeSelection(imageFrame)
+        OverlayDrawing.drawLabel(
+            "\(image.width) × \(image.height)", above: imageFrame, in: bounds, radius: Config.Belt.cornerRadius)
     }
 
     override func keyDown(with event: NSEvent) {
