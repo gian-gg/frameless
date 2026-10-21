@@ -3,7 +3,7 @@ import Foundation
 /// Output folder, file names and elapsed-time labels for recordings.
 enum RecordingFile {
     static func directory() throws -> URL {
-        let url = URL.moviesDirectory.appending(path: "Frameless", directoryHint: .isDirectory)
+        let url = URL.moviesDirectory.appending(path: Config.Output.folderName, directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }
@@ -12,8 +12,8 @@ enum RecordingFile {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = timeZone
-        formatter.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
-        return "Frameless \(formatter.string(from: date)).mp4"
+        formatter.dateFormat = Config.Output.dateFormat
+        return "\(Config.Output.namePrefix) \(formatter.string(from: date)).\(Config.Output.fileExtension)"
     }
 
     static func elapsed(_ seconds: TimeInterval) -> String {

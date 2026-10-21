@@ -10,9 +10,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case recording(since: Date)
     }
 
-    private static let screenRecordingSettings = URL(
-        string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
-
     private let recorder = Recorder()
     private let selector = AreaSelector()
     private let outline = AreaOutline()
@@ -89,7 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         outline.hide()
         guard let statusItem, let button = statusItem.button else { return }
         button.attributedTitle = NSAttributedString()
-        button.image = NSImage(systemSymbolName: "record.circle", accessibilityDescription: "Frameless")
+        button.image = NSImage(systemSymbolName: Config.StatusItem.symbolName, accessibilityDescription: "Frameless")
         button.target = nil
         button.action = nil
         statusItem.menu = menu
@@ -103,7 +100,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         button.target = self
         button.action = #selector(stopRecording)
         updateElapsed()
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+        let interval = Config.StatusItem.timerInterval
+        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.updateElapsed() }
         }
     }
@@ -137,7 +135,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: "Open System Settings")
         alert.addButton(withTitle: "Cancel")
         NSApp.activate()
-        if alert.runModal() == .alertFirstButtonReturn, let url = Self.screenRecordingSettings {
+        if alert.runModal() == .alertFirstButtonReturn, let url = Config.Links.screenRecordingSettings {
             NSWorkspace.shared.open(url)
         }
     }

@@ -63,9 +63,9 @@ final class Recorder: NSObject {
             config.height = size.height
         }
         config.captureResolution = .best
-        config.minimumFrameInterval = CMTime(value: 1, timescale: 60)
-        config.showsCursor = true
-        config.capturesAudio = true
+        config.minimumFrameInterval = CMTime(value: 1, timescale: Config.Recording.maxFramesPerSecond)
+        config.showsCursor = Config.Recording.showsCursor
+        config.capturesAudio = Config.Recording.capturesSystemAudio
         config.excludesCurrentProcessAudio = true
         return config
     }
@@ -73,8 +73,8 @@ final class Recorder: NSObject {
     private static func outputConfiguration(to url: URL) -> SCRecordingOutputConfiguration {
         let config = SCRecordingOutputConfiguration()
         config.outputURL = url
-        config.outputFileType = .mp4
-        config.videoCodecType = .h264
+        config.outputFileType = Config.Recording.fileType
+        config.videoCodecType = Config.Recording.videoCodec
         return config
     }
 

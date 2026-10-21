@@ -3,14 +3,14 @@ import AppKit
 /// Click-through outline drawn just outside the area being recorded.
 @MainActor
 final class AreaOutline {
-    private static let gap: CGFloat = 3
     private var window: NSWindow?
 
     /// Shows the outline around a rect in global AppKit coordinates.
     func show(around rect: CGRect) {
         hide()
         let window = NSWindow(
-            contentRect: rect.insetBy(dx: -Self.gap, dy: -Self.gap), styleMask: .borderless, backing: .buffered,
+            contentRect: rect.insetBy(dx: -Config.Outline.gap, dy: -Config.Outline.gap), styleMask: .borderless,
+            backing: .buffered,
             defer: false)
         window.level = .statusBar
         window.isOpaque = false
@@ -35,8 +35,9 @@ final class AreaOutline {
 private final class OutlineView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         NSColor.systemRed.withAlphaComponent(0.9).setStroke()
-        let path = NSBezierPath(rect: bounds.insetBy(dx: 1, dy: 1))
-        path.lineWidth = 2
+        let path = NSBezierPath(
+            rect: bounds.insetBy(dx: Config.Outline.lineWidth / 2, dy: Config.Outline.lineWidth / 2))
+        path.lineWidth = Config.Outline.lineWidth
         path.stroke()
     }
 }

@@ -55,12 +55,6 @@ final class AreaSelector {
     }
 }
 
-extension NSScreen {
-    var displayID: CGDirectDisplayID? {
-        deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
-    }
-}
-
 /// Borderless, key-capable window covering one screen.
 private final class OverlayWindow: NSWindow {
     let overlay: OverlayView
@@ -85,9 +79,6 @@ private final class OverlayWindow: NSWindow {
 
 /// Dims the screen, tracks the drag and reports a click (nil) or a dragged rect.
 private final class OverlayView: NSView {
-    private static let minimumDrag: CGFloat = 4
-    private static let hint = "Click a screen to record it  ·  Drag to record an area  ·  Esc to cancel"
-
     var onFinish: (@MainActor (CGRect?) -> Void)?
     var onCancel: (@MainActor () -> Void)?
 
@@ -133,7 +124,8 @@ private final class OverlayView: NSView {
 
     override func mouseUp(with event: NSEvent) {
         current = convert(event.locationInWindow, from: nil)
-        guard let rect = selection, rect.width >= Self.minimumDrag, rect.height >= Self.minimumDrag else {
+        guard let rect = selection, rect.width >= Config.Overlay.minimumDrag, rect.height >= Config.Overlay.minimumDrag
+        else {
             onFinish?(nil)
             return
         }
@@ -146,12 +138,14 @@ private final class OverlayView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        NSColor.black.withAlphaComponent(0.3).setFill()
+        NSColor.black.withAlphaComponent(Config.Overlay.dimOpacity).setFill()
         bounds.fill()
 
         guard let rect = selection, rect.width > 0, rect.height > 0 else {
-            let badge = badgeFrame(for: text(Self.hint))
-            drawBadge(text(Self.hint), in: badge.offsetBy(dx: bounds.midX - badge.midX, dy: bounds.midY - badge.midY))
+            let badge = badgeFrame(for: text(Config.Overlay.hint))
+            drawBadge(
+                text(Config.Overlay.hint),
+                in: badge.offsetBy(dx: bounds.midX - badge.midX, dy: bounds.midY - badge.midY))
             return
         }
         NSColor.clear.setFill()
@@ -172,7 +166,7 @@ private final class OverlayView: NSView {
         NSAttributedString(
             string: string,
             attributes: [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .medium),
+                .font: NSFont.monospacedDigitSystemFont(ofSize: Config.Overlay.badgeFontSize, weight: .medium),
                 .foregroundColor: NSColor.white,
             ])
     }
@@ -183,7 +177,7 @@ private final class OverlayView: NSView {
     }
 
     private func drawBadge(_ text: NSAttributedString, in frame: CGRect) {
-        NSColor.black.withAlphaComponent(0.7).setFill()
+        NSColor.black.withAlphaComponent(Config.Overlay.badgeOpacity).setFill()
         NSBezierPath(roundedRect: frame, xRadius: 6, yRadius: 6).fill()
         text.draw(at: CGPoint(x: frame.minX + 10, y: frame.minY + 5))
     }
