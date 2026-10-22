@@ -1,6 +1,7 @@
 import AppKit
 
-/// With no tool picked: clicking a mark selects it, dragging moves it, and Delete removes it, each one undoable step.
+/// With no tool picked: clicking a mark selects it, dragging moves it, Delete removes it, and the style pill restyles
+/// it, each one undoable step.
 extension AnnotationCanvas {
     /// The marks as shown, with the selected one following the drag.
     var shownMarks: [Mark] {
@@ -44,6 +45,15 @@ extension AnnotationCanvas {
         selection = nil
         editMarks { $0.remove(at: index) }
         return true
+    }
+
+    /// Gives the selected mark a new colour or thickness, if a mark is selected.
+    func restyleSelection(color: MarkColor? = nil, weight: MarkWeight? = nil) {
+        guard let index = selection, history.marks.indices.contains(index) else { return }
+        editMarks {
+            if let color { $0[index].color = color }
+            if let weight { $0[index].weight = weight }
+        }
     }
 
     /// A dashed outline around the selected mark.

@@ -5,7 +5,7 @@ import CoreGraphics
 struct Mark: Equatable {
     let tool: AnnotationTool
     var points: [CGPoint]
-    let color: MarkColor
+    var color: MarkColor
     var weight = Config.Annotate.defaultWeight
     var text = ""
 }

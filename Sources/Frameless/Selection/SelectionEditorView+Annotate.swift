@@ -93,12 +93,14 @@ extension SelectionEditorView {
     }
 
     private func pickColor(_ color: MarkColor) {
+        canvas?.restyleSelection(color: color)
         markColor = color
         onMarkColorChange?(color)
         hideStyleRow()
     }
 
     private func pickWeight(_ weight: MarkWeight) {
+        canvas?.restyleSelection(weight: weight)
         markWeight = weight
         onMarkWeightChange?(weight)
         hideStyleRow()

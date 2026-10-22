@@ -64,4 +64,18 @@ struct MarkHistoryTests {
         history.undo()
         #expect(history.marks.isEmpty)
     }
+
+    @Test("restyling a mark undoes back to its old colour and thickness")
+    func undoesRestyle() {
+        var history = MarkHistory()
+        history.add(mark(1))
+        history.change {
+            $0[0].color = .red
+            $0[0].weight = .thick
+        }
+        #expect(history.marks[0].color == .red && history.marks[0].weight == .thick)
+
+        history.undo()
+        #expect(history.marks == [mark(1)])
+    }
 }
