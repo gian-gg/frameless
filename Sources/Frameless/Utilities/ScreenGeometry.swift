@@ -119,6 +119,15 @@ enum ScreenGeometry {
         return (even(size.width), even(size.height))
     }
 
+    /// A frame resized to `size` while the point under `anchor` stays put.
+    static func zoomedFrame(_ frame: CGRect, to size: CGSize, around anchor: CGPoint) -> CGRect {
+        guard frame.width > 0, frame.height > 0 else { return CGRect(origin: frame.origin, size: size) }
+        let ratio = CGSize(width: size.width / frame.width, height: size.height / frame.height)
+        let origin = CGPoint(
+            x: anchor.x - (anchor.x - frame.minX) * ratio.width, y: anchor.y - (anchor.y - frame.minY) * ratio.height)
+        return CGRect(origin: CGPoint(x: origin.x.rounded(), y: origin.y.rounded()), size: size)
+    }
+
     /// Pixel dimensions for a point size, rounded down to even numbers for H.264.
     static func evenPixelSize(_ size: CGSize, scale: CGFloat) -> (width: Int, height: Int) {
         func even(_ points: CGFloat) -> Int { max(2, Int(points * scale) / 2 * 2) }

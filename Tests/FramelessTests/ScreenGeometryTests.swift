@@ -161,4 +161,20 @@ struct ScreenGeometryTests {
         #expect(size.width == width)
         #expect(size.height == height)
     }
+
+    @Test("zooming keeps the point under the pointer still")
+    func zoomsAroundAnchor() {
+        let frame = CGRect(x: 100, y: 100, width: 200, height: 100)
+        let zoomed = ScreenGeometry.zoomedFrame(
+            frame, to: CGSize(width: 400, height: 200), around: CGPoint(x: 150, y: 125))
+        #expect(zoomed == CGRect(x: 50, y: 75, width: 400, height: 200))
+    }
+
+    @Test("zooming around the centre grows evenly on every side")
+    func zoomsAroundCentre() {
+        let frame = CGRect(x: 100, y: 100, width: 200, height: 100)
+        let zoomed = ScreenGeometry.zoomedFrame(
+            frame, to: CGSize(width: 100, height: 50), around: CGPoint(x: 200, y: 150))
+        #expect(zoomed == CGRect(x: 150, y: 125, width: 100, height: 50))
+    }
 }

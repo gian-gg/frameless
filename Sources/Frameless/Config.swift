@@ -62,6 +62,11 @@ enum Config {
         static let closeSize: CGFloat = 24
         /// Gap between the pin's top-left corner and its close button.
         static let closeInset: CGFloat = 6
+        static let minZoom: CGFloat = 0.25
+        static let maxZoom: CGFloat = 4
+        static let minOpacity: CGFloat = 0.2
+        /// How long the zoom or opacity tag stays up after the last change.
+        static let tagDuration: TimeInterval = 1
     }
 
     /// The shared look: corners, dims, panels and fades used across the picker, selection editor and thumbnail.
