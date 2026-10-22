@@ -65,7 +65,8 @@ enum Config {
         static let minZoom: CGFloat = 0.25
         static let maxZoom: CGFloat = 4
         static let minOpacity: CGFloat = 0.2
-        /// Opacity presets in the pin's right-click menu, in percent.
+        /// Zoom and opacity presets in the pin's right-click menu, in percent.
+        static let zoomChoices = [200, 100, 50]
         static let opacityChoices = [100, 75, 50]
         /// How long the zoom or opacity tag stays up after the last change.
         static let tagDuration: TimeInterval = 1

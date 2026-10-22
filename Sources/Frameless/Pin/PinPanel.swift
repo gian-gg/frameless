@@ -1,7 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Floating window holding one pinned screenshot; drag to move, scroll or pinch to zoom, ⌥-scroll to fade,
+/// Floating window holding one pinned screenshot; drag to move, scroll to zoom, ⌥-scroll to fade,
 /// right-click for the rest.
 final class PinPanel: NSPanel {
     var onClose: (@MainActor () -> Void)?
@@ -68,16 +68,24 @@ final class PinPanel: NSPanel {
         menu.addItem(item("Copy", #selector(copyPin), key: "c"))
         menu.addItem(item("Save", #selector(savePin), key: "s"))
         menu.addItem(.separator())
-        menu.addItem(item("Actual Size", #selector(actualSize)))
-        let opacity = NSMenu()
+        let zoomMenu = NSMenu()
+        for percent in Config.Pin.zoomChoices {
+            let choice = item("\(percent)%", #selector(chooseZoom(_:)))
+            choice.tag = percent
+            zoomMenu.addItem(choice)
+        }
+        zoomMenu.addItem(.separator())
+        zoomMenu.addItem(withTitle: "Scroll to Adjust", action: nil, keyEquivalent: "")
+        menu.addItem(withTitle: "Zoom", action: nil, keyEquivalent: "").submenu = zoomMenu
+        let opacityMenu = NSMenu()
         for percent in Config.Pin.opacityChoices {
             let choice = item("\(percent)%", #selector(chooseOpacity(_:)))
             choice.tag = percent
-            opacity.addItem(choice)
+            opacityMenu.addItem(choice)
         }
-        opacity.addItem(.separator())
-        opacity.addItem(withTitle: "⌥ + Scroll to Adjust", action: nil, keyEquivalent: "")
-        menu.addItem(withTitle: "Opacity", action: nil, keyEquivalent: "").submenu = opacity
+        opacityMenu.addItem(.separator())
+        opacityMenu.addItem(withTitle: "⌥ + Scroll to Adjust", action: nil, keyEquivalent: "")
+        menu.addItem(withTitle: "Opacity", action: nil, keyEquivalent: "").submenu = opacityMenu
         menu.addItem(.separator())
         menu.addItem(item("Close", #selector(closePin), key: "\u{1b}", modifiers: []))
         menu.addItem(item("Close All Pins", #selector(closeAllPins)))
@@ -97,8 +105,8 @@ final class PinPanel: NSPanel {
 
     @objc private func savePin() { onSave?() }
 
-    @objc private func actualSize() {
-        zoom(by: 1 / zoom, around: CGPoint(x: frame.midX, y: frame.midY))
+    @objc private func chooseZoom(_ sender: NSMenuItem) {
+        zoom(by: CGFloat(sender.tag) / 100 / zoom, around: CGPoint(x: frame.midX, y: frame.midY))
     }
 
     @objc private func chooseOpacity(_ sender: NSMenuItem) {
@@ -112,6 +120,8 @@ final class PinPanel: NSPanel {
     override func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         if menuItem.action == #selector(chooseOpacity(_:)) {
             menuItem.state = Int((alphaValue * 100).rounded()) == menuItem.tag ? .on : .off
+        } else if menuItem.action == #selector(chooseZoom(_:)) {
+            menuItem.state = Int((zoom * 100).rounded()) == menuItem.tag ? .on : .off
         }
         return true
     }
@@ -224,10 +234,6 @@ private final class PinView: NSView {
         } else {
             onZoom?(exp(delta))
         }
-    }
-
-    override func magnify(with event: NSEvent) {
-        onZoom?(1 + event.magnification)
     }
 
     // MARK: - Hover
