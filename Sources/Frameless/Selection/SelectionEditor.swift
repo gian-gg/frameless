@@ -22,21 +22,25 @@ final class SelectionEditor {
 
     /// Shows the selection on its screen, calls `onShown` once it's up; returns the choice, or nil when closed.
     func present(
-        _ selection: CaptureSelection, for purpose: CapturePurpose, onShown: @MainActor () -> Void = {}
+        _ selection: CaptureSelection, for purpose: CapturePurpose, savingTo folderName: String = "",
+        onShown: @MainActor () -> Void = {}
     ) async -> Choice? {
         guard continuation == nil,
             let screen = NSScreen.screens.first(where: { $0.displayID == selection.displayID })
         else { return nil }
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
-            show(selection, for: purpose, on: screen)
+            show(selection, for: purpose, savingTo: folderName, on: screen)
             onShown()
         }
     }
 
-    private func show(_ selection: CaptureSelection, for purpose: CapturePurpose, on screen: NSScreen) {
+    private func show(
+        _ selection: CaptureSelection, for purpose: CapturePurpose, savingTo folderName: String, on screen: NSScreen
+    ) {
         let window = ScreenCoverWindow(screen: screen)
-        let view = SelectionEditorView(selection: selection, purpose: purpose, scale: screen.backingScaleFactor)
+        let view = SelectionEditorView(
+            selection: selection, purpose: purpose, folderName: folderName, scale: screen.backingScaleFactor)
         view.onFinish = { [weak self] choice in self?.finish(choice) }
         window.contentView = view
         window.makeFirstResponder(view)
@@ -61,6 +65,8 @@ private final class SelectionEditorView: NSView {
 
     private let selection: CaptureSelection
     private let purpose: CapturePurpose
+    /// Where Save puts the screenshot, for its tooltip.
+    private let folderName: String
     private let scale: CGFloat
     /// The selection in this screen's local points; fixed for a window, editable otherwise.
     private var rect: CGRect
@@ -75,9 +81,10 @@ private final class SelectionEditorView: NSView {
         let startRect: CGRect
     }
 
-    init(selection: CaptureSelection, purpose: CapturePurpose, scale: CGFloat) {
+    init(selection: CaptureSelection, purpose: CapturePurpose, folderName: String, scale: CGFloat) {
         self.selection = selection
         self.purpose = purpose
+        self.folderName = folderName
         self.scale = scale
         rect = Self.localRect(for: selection)
         super.init(frame: .zero)
@@ -133,7 +140,8 @@ private final class SelectionEditorView: NSView {
                     symbol: "doc.on.doc", title: "Copy", shortcut: .text("⌘C"), toolTip: "Copy to the clipboard",
                     perform: { [weak self] in self?.choose(.copy) }),
                 .init(
-                    symbol: "square.and.arrow.down", title: "Save", shortcut: .text("⌘S"), toolTip: "Save to Pictures",
+                    symbol: "square.and.arrow.down", title: "Save", shortcut: .text("⌘S"),
+                    toolTip: "Save to \(folderName)",
                     perform: { [weak self] in self?.choose(.save) }),
             ]
         case .recording:
