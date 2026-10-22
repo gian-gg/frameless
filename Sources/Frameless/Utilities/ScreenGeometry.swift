@@ -74,16 +74,18 @@ enum ScreenGeometry {
         return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
     }
 
-    /// Where a bar goes for a rect: `gap` under it, lined up with its right edge, or `inset` inside its bottom when
-    /// there's no room; kept on screen.
+    /// Where a bar goes for a rect: `gap` under it, or `inset` inside its bottom when there's no room; centred when
+    /// `centred` is set or the rect is narrower than the bar, otherwise lined up with its right edge; kept on screen.
     static func barOrigin(
-        for size: CGSize, under rect: CGRect, in bounds: CGRect, gap: CGFloat, inset: CGFloat
+        for size: CGSize, under rect: CGRect, in bounds: CGRect, gap: CGFloat, inset: CGFloat, centred: Bool = false
     ) -> CGPoint {
         var top = rect.minY - gap - size.height
         if top < bounds.minY + gap {
             top = max(rect.minY, bounds.minY) + inset
         }
-        let left = min(max(rect.maxX - size.width, bounds.minX + gap), bounds.maxX - gap - size.width)
+        let isCentred = centred || rect.width <= size.width
+        let preferred = isCentred ? rect.midX - size.width / 2 : rect.maxX - size.width
+        let left = min(max(preferred, bounds.minX + gap), bounds.maxX - gap - size.width)
         return CGPoint(x: left.rounded(), y: top.rounded())
     }
 

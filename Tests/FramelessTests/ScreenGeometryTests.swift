@@ -199,4 +199,30 @@ struct ScreenGeometryTests {
             from: CGPoint(x: 40, y: 40), to: end, in: CGRect(x: 0, y: 0, width: 80, height: 100))
         #expect(snapped == expected)
     }
+
+    @Test(
+        "centres the bar under a rect narrower than it, or when asked, and keeps it on screen",
+        arguments: zip(
+            [
+                CGRect(x: 100, y: 300, width: 50, height: 100),
+                CGRect(x: 100, y: 300, width: 400, height: 200),
+                CGRect(x: 0, y: 0, width: 1000, height: 800),
+            ],
+            [CGPoint(x: 65, y: 250), CGPoint(x: 240, y: 250), CGPoint(x: 440, y: 56)]))
+    func centresBar(rect: CGRect, expected: CGPoint) {
+        let origin = ScreenGeometry.barOrigin(
+            for: CGSize(width: 120, height: 40), under: rect, in: CGRect(x: 0, y: 0, width: 1000, height: 800),
+            gap: 10, inset: 56, centred: rect.width > 120)
+        #expect(origin == expected)
+    }
+
+    @Test("a rect exactly as wide as the bar puts it in the same place centred or not")
+    func noJumpAtBarWidth() {
+        let rect = CGRect(x: 100, y: 300, width: 120, height: 100)
+        let bounds = CGRect(x: 0, y: 0, width: 1000, height: 800)
+        let size = CGSize(width: 120, height: 40)
+        #expect(
+            ScreenGeometry.barOrigin(for: size, under: rect, in: bounds, gap: 10, inset: 56)
+                == ScreenGeometry.barOrigin(for: size, under: rect, in: bounds, gap: 10, inset: 56, centred: true))
+    }
 }

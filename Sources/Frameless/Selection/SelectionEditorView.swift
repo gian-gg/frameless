@@ -152,7 +152,7 @@ final class SelectionEditorView: NSView {
             toolbar.setFrameOrigin(
                 ScreenGeometry.barOrigin(
                     for: toolbar.frame.size, under: rect, in: bounds, gap: Config.Bar.selectionGap,
-                    inset: Config.Style.barBottomOffset))
+                    inset: Config.Style.barBottomOffset, centred: isWindow || rect == bounds))
         }
         placeStyleRow()
         sizeTag.setFrameOrigin(
