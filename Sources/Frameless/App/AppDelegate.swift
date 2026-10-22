@@ -91,6 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(withTitle: "Frame Rate", action: nil, keyEquivalent: "").submenu = choiceMenu(
             FrameRate.allCases, title: \.title, \.frameRate)
         menu.addItem(withTitle: "Shortcuts", action: nil, keyEquivalent: "").submenu = makeShortcutsMenu()
+        menu.addItem(withTitle: "Save To", action: nil, keyEquivalent: "").submenu = makeSaveLocationsMenu()
         menu.addItem(.separator())
         menu.addItem(toggleItem("Play Sounds", \.playsSounds))
         menu.addItem(withTitle: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
