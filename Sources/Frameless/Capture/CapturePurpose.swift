@@ -12,6 +12,13 @@ enum CapturePurpose: CaseIterable {
         }
     }
 
+    var noun: String {
+        switch self {
+        case .screenshot: "screenshot"
+        case .recording: "recording"
+        }
+    }
+
     /// The folder that holds `Frameless/` when no save folder is chosen.
     var defaultSaveBase: URL {
         switch self {

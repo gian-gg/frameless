@@ -26,19 +26,20 @@ struct ScreenshotterTests {
         #expect(properties[kCGImagePropertyDPIWidth] as? Double == 144)
     }
 
-    @Test("saves a capture as a PNG inside Frameless/ under the base folder")
-    func savesIntoFramelessFolder() throws {
+    @Test("saves a capture as a PNG straight into the folder")
+    func savesIntoFolder() throws {
         let context = try #require(
             CGContext(
                 data: nil, width: 4, height: 2, bitsPerComponent: 8, bytesPerRow: 0,
                 space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
         let shot = CapturedImage(image: try #require(context.makeImage()), scale: 1, displayID: 1)
-        let base = FileManager.default.temporaryDirectory.appending(path: "ScreenshotterTests.\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: base) }
+        let folder = FileManager.default.temporaryDirectory.appending(path: "ScreenshotterTests.\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
 
-        let url = try Screenshotter.save(shot, in: base)
+        let url = try Screenshotter.save(shot, in: folder)
 
-        #expect(url.deletingLastPathComponent().lastPathComponent == Config.Output.folderName)
+        #expect(url.deletingLastPathComponent().standardizedFileURL == folder.standardizedFileURL)
         #expect(url.pathExtension == "png")
         #expect(FileManager.default.fileExists(atPath: url.path(percentEncoded: false)))
     }

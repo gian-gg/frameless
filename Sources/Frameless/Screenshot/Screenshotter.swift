@@ -41,10 +41,10 @@ enum Screenshotter {
         return CapturedImage(image: image, scale: CGFloat(filter.pointPixelScale), displayID: selection.displayID)
     }
 
-    /// Writes the capture as a PNG into `<base>/Frameless`, `~/Pictures/Frameless` by default.
-    static func save(_ shot: CapturedImage, in base: URL = .picturesDirectory) throws -> URL {
+    /// Writes the capture as a timestamped PNG into the folder.
+    static func save(_ shot: CapturedImage, in folder: URL) throws -> URL {
         let name = OutputFile.name(for: .now, fileExtension: Config.Output.screenshotExtension)
-        let url = try OutputFile.directory(in: base).appending(path: name)
+        let url = folder.appending(path: name)
         try writePNG(shot.image, scale: shot.scale, to: url)
         return url
     }

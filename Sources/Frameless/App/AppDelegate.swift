@@ -208,7 +208,7 @@ extension AppDelegate {
             else { return showIdle() }
             let selection = choice.selection
             do {
-                let url = try RecordingFile.directory().appending(path: RecordingFile.name(for: .now))
+                let url = try saveFolder(for: .recording).appending(path: RecordingFile.name(for: .now))
                 try await recorder.start(selection, options: preferences.recordingOptions, to: url)
                 recordingScreen = NSScreen.screens.first { $0.displayID == selection.displayID }
                 outline.show(selection)
@@ -317,7 +317,7 @@ extension AppDelegate {
                     Screenshotter.copy(shot)
                     playSound(.screenshot)
                 case .save:
-                    let url = try Screenshotter.save(shot)
+                    let url = try Screenshotter.save(shot, in: saveFolder(for: .screenshot))
                     playSound(.screenshot)
                     thumbnail.show(url, on: NSScreen.screens.first { $0.displayID == shot.displayID })
                 case .record:
