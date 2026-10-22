@@ -141,6 +141,9 @@ enum Config {
         /// Width of each icon-only tool button.
         static let toolWidth: CGFloat = 32
         static let swatchRingOpacity: CGFloat = 0.5
+        /// The glass lens behind a selected button: its tint and how long it takes to slide.
+        static let lensTintOpacity: CGFloat = 0.12
+        static let lensDuration: TimeInterval = 0.25
         /// Gap between a style button and its row of choices above it.
         static let styleRowGap: CGFloat = 8
         /// Tool icons are dimmed to this until selected; the selected one sits on this brighter pill.

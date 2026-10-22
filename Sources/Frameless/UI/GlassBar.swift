@@ -29,6 +29,7 @@ final class GlassBar: NSView {
 
     private var handlers: [@MainActor () -> Void] = []
     private var toolButtons: [BarButton] = []
+    private var toolLens: GlassLens?
     private var styleButtons: [BarButton] = []
     private var selectedTool: Int?
 
@@ -111,15 +112,20 @@ final class GlassBar: NSView {
         for (buttonIndex, button) in toolButtons.enumerated() {
             button.isSelected = buttonIndex == index
         }
+        toolLens?.move(to: index.map { toolButtons[$0].frame })
     }
 
     /// The tools' own capsule, between the style capsule and the main capsule.
     private func toolCapsule(for tools: [Tool], at capsuleLeft: CGFloat, height: CGFloat) -> GlassPanel {
         let capsule = GlassPanel()
+        let lens = GlassLens.make()
+        if let lens { capsule.content.addSubview(lens) }
+        toolLens = lens
         var left = Config.Bar.padding
         for (index, tool) in tools.enumerated() {
             let button = BarButton(icon: tool.icon, title: nil, toolTip: tool.toolTip)
             button.isToggle = true
+            button.drawsSelection = lens == nil
             button.tag = index
             button.target = self
             button.action = #selector(toolPressed(_:))

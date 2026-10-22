@@ -56,6 +56,11 @@ final class BarButton: NSControl {
         didSet { needsDisplay = true }
     }
 
+    /// Draws its own pill when selected; off where a glass lens shows the selection instead.
+    var drawsSelection = true {
+        didSet { needsDisplay = true }
+    }
+
     /// Shown with a brighter pill and a full-strength icon, for the active tool.
     var isSelected = false {
         didSet { needsDisplay = true }
@@ -154,8 +159,9 @@ final class BarButton: NSControl {
     // MARK: - Drawing
 
     override func draw(_ dirtyRect: NSRect) {
-        if isInteractive, isPressed || isSelected || isHovering {
-            let opacity = isSelected ? Config.Bar.selectedFillOpacity : isPressed ? 0.22 : 0.1
+        let showsSelection = isSelected && drawsSelection
+        if isInteractive, isPressed || showsSelection || isHovering {
+            let opacity = showsSelection ? Config.Bar.selectedFillOpacity : isPressed ? 0.22 : 0.1
             NSColor.labelColor.withAlphaComponent(opacity).setFill()
             let radius = min(bounds.width, bounds.height) / 2
             NSBezierPath(roundedRect: bounds, xRadius: radius, yRadius: radius).fill()
