@@ -1,6 +1,6 @@
 import AppKit
 
-/// With no tool picked: clicking a mark selects it and dragging moves it, as one undoable step.
+/// With no tool picked: clicking a mark selects it, dragging moves it, and Delete removes it, each one undoable step.
 extension AnnotationCanvas {
     /// The marks as shown, with the selected one following the drag.
     var shownMarks: [Mark] {
@@ -36,6 +36,14 @@ extension AnnotationCanvas {
         }
         guard let index = selection, let offset = moveOffset, offset != .zero else { return }
         editMarks { $0[index] = MarkGeometry.moved($0[index], by: offset) }
+    }
+
+    /// Removes the selected mark; false when nothing is selected.
+    func deleteSelection() -> Bool {
+        guard let index = selection, history.marks.indices.contains(index) else { return false }
+        selection = nil
+        editMarks { $0.remove(at: index) }
+        return true
     }
 
     /// A dashed outline around the selected mark.

@@ -248,6 +248,8 @@ final class SelectionEditorView: NSView {
                 onFinish?(nil)
             }
         case kVK_Return, kVK_ANSI_KeypadEnter: choose(purpose == .screenshot ? .copy : .record)
+        case kVK_Delete, kVK_ForwardDelete:
+            if canvas?.deleteSelection() != true { super.keyDown(with: event) }
         default:
             guard let tool = tool(for: event) else { return super.keyDown(with: event) }
             pick(self.tool == tool ? nil : tool)
