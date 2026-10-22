@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let selector = AreaSelector()
     private let outline = AreaOutline()
     private let thumbnail = CaptureThumbnail()
+    private let pins = PinBoard()
     private let editor = SelectionEditor()
     let hotkeys = Hotkeys()
     let shortcutRecorder = ShortcutRecorder()
@@ -322,6 +323,9 @@ extension AppDelegate {
                     let url = try Screenshotter.save(shot, in: saveFolder(for: .screenshot))
                     playSound(.screenshot)
                     thumbnail.show(url, on: NSScreen.screens.first { $0.displayID == shot.displayID })
+                case .pin:
+                    pins.pin(shot, over: PinBoard.frame(of: choice.selection))
+                    playSound(.screenshot)
                 case .record:
                     break
                 }

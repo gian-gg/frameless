@@ -56,6 +56,14 @@ enum Config {
         static let thumbnailFadeDuration: TimeInterval = 0.2
     }
 
+    /// Screenshots pinned on screen.
+    enum Pin {
+        static let cornerRadius: CGFloat = 6
+        static let closeSize: CGFloat = 24
+        /// Gap between the pin's top-left corner and its close button.
+        static let closeInset: CGFloat = 6
+    }
+
     /// The shared look: corners, dims, panels and fades used across the picker, selection editor and thumbnail.
     enum Style {
         /// Rounding for non-capsule surfaces such as the thumbnail; bars and tags are full capsules.

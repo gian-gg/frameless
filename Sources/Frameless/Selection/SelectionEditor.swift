@@ -1,13 +1,14 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// After picking, keeps the selection on screen to resize or move until it's confirmed: Copy or Save for a
+/// After picking, keeps the selection on screen to resize or move until it's confirmed: Copy, Save or Pin for a
 /// screenshot, Record for a recording. Nothing is captured until then.
 @MainActor
 final class SelectionEditor {
     enum Action {
         case copy
         case save
+        case pin
         case record
     }
 
@@ -131,7 +132,7 @@ private final class SelectionEditorView: NSView {
             target: isWholeScreen ? .display : .area(rect))
     }
 
-    /// Copy and Save for a screenshot; Record for a recording.
+    /// Copy, Save and Pin for a screenshot; Record for a recording.
     private func barItems() -> [GlassBar.Item] {
         switch purpose {
         case .screenshot:
@@ -143,6 +144,9 @@ private final class SelectionEditorView: NSView {
                     symbol: "square.and.arrow.down", title: "Save", shortcut: .text("⌘S"),
                     toolTip: "Save to \(folderName)",
                     perform: { [weak self] in self?.choose(.save) }),
+                .init(
+                    symbol: "pin", title: "Pin", shortcut: .text("⌘P"), toolTip: "Pin on screen",
+                    perform: { [weak self] in self?.choose(.pin) }),
             ]
         case .recording:
             [
@@ -259,6 +263,7 @@ private final class SelectionEditorView: NSView {
         switch Int(event.keyCode) {
         case kVK_ANSI_C: choose(.copy)
         case kVK_ANSI_S: choose(.save)
+        case kVK_ANSI_P: choose(.pin)
         default: return super.performKeyEquivalent(with: event)
         }
         return true
