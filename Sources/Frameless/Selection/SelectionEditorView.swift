@@ -17,6 +17,10 @@ final class SelectionEditorView: NSView {
     private var toolbar: GlassBar?
     private let sizeTag = GlassTag()
     private var drag: Drag?
+    private var tool: AnnotationTool?
+    /// The capture taken when a tool is first picked; drawn in place of the live screen from then on.
+    private var frozen: CapturedImage?
+    private var isFreezing = false
 
     /// A resize or move in progress: what was grabbed, and where the pointer and selection started.
     private struct Drag {
@@ -33,7 +37,10 @@ final class SelectionEditorView: NSView {
         rect = Self.localRect(for: selection)
         super.init(frame: .zero)
         let toolbar = GlassBar(
-            items: barItems(), closeToolTip: "Close (Esc)", close: { [weak self] in self?.onFinish?(nil) })
+            tools: purpose == .screenshot ? AnnotationTool.allCases.map(\.icon) : [], items: barItems(),
+            closeToolTip: "Close (Esc)",
+            close: { [weak self] in self?.onFinish?(nil) })
+        toolbar.onSelectTool = { [weak self] index in self?.pick(index.map { AnnotationTool.allCases[$0] }) }
         addSubview(toolbar)
         self.toolbar = toolbar
         addSubview(sizeTag)
@@ -47,9 +54,14 @@ final class SelectionEditorView: NSView {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    private var isWindow: Bool {
+        if case .window = selection.target { return true }
+        return false
+    }
+
+    /// Areas and displays can be resized and moved until the capture is frozen.
     private var isResizable: Bool {
-        if case .window = selection.target { return false }
-        return true
+        !isWindow && frozen == nil && !isFreezing
     }
 
     private static func localRect(for selection: CaptureSelection) -> CGRect {
@@ -68,7 +80,7 @@ final class SelectionEditorView: NSView {
 
     /// The selection to capture: the window unchanged, the whole display while untouched, else the area.
     private var finalSelection: CaptureSelection {
-        if !isResizable { return selection }
+        if isWindow { return selection }
         let isWholeScreen = rect == CGRect(origin: .zero, size: selection.screenFrame.size)
         return CaptureSelection(
             displayID: selection.displayID, screenFrame: selection.screenFrame,
@@ -81,20 +93,20 @@ final class SelectionEditorView: NSView {
         case .screenshot:
             [
                 .init(
-                    symbol: "doc.on.doc", title: "Copy", shortcut: .text("⌘C"), toolTip: "Copy to the clipboard",
+                    icon: .copy, title: "Copy", shortcut: .text("⌘C"), toolTip: "Copy to the clipboard",
                     perform: { [weak self] in self?.choose(.copy) }),
                 .init(
-                    symbol: "square.and.arrow.down", title: "Save", shortcut: .text("⌘S"),
+                    icon: .download, title: "Save", shortcut: .text("⌘S"),
                     toolTip: "Save to \(folderName)",
                     perform: { [weak self] in self?.choose(.save) }),
                 .init(
-                    symbol: "pin", title: "Pin", shortcut: .text("⌘P"), toolTip: "Pin on screen",
+                    icon: .pin, title: "Pin", shortcut: .text("⌘P"), toolTip: "Pin on screen",
                     perform: { [weak self] in self?.choose(.pin) }),
             ]
         case .recording:
             [
                 .init(
-                    symbol: Config.StatusItem.recordingSymbolName, title: "Record", shortcut: .text("↩"),
+                    icon: .circleDot, title: "Record", shortcut: .text("↩"),
                     toolTip: "Start recording", perform: { [weak self] in self?.choose(.record) })
             ]
         }
@@ -128,6 +140,7 @@ final class SelectionEditorView: NSView {
         bounds.fill()
         NSColor.clear.setFill()
         rect.fill(using: .copy)
+        if let frozen { NSGraphicsContext.current?.cgContext.draw(frozen.image, in: rect) }
         Panel.drawSelectionFrame(rect)
     }
 
@@ -195,7 +208,9 @@ final class SelectionEditorView: NSView {
         switch Int(event.keyCode) {
         case kVK_Escape: onFinish?(nil)
         case kVK_Return, kVK_ANSI_KeypadEnter: choose(purpose == .screenshot ? .copy : .record)
-        default: super.keyDown(with: event)
+        default:
+            guard let tool = tool(for: event) else { return super.keyDown(with: event) }
+            pick(self.tool == tool ? nil : tool)
         }
     }
 
@@ -210,5 +225,41 @@ final class SelectionEditorView: NSView {
         default: return super.performKeyEquivalent(with: event)
         }
         return true
+    }
+}
+
+// MARK: - Annotation tools
+
+extension SelectionEditorView {
+    /// The tool a bare key press picks, for screenshots only.
+    private func tool(for event: NSEvent) -> AnnotationTool? {
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting(.capsLock)
+        guard purpose == .screenshot, modifiers.isEmpty else { return nil }
+        return AnnotationTool.forKey(event.charactersIgnoringModifiers ?? "")
+    }
+
+    /// Selects a tool, or none; the first tool picked freezes the selection.
+    private func pick(_ tool: AnnotationTool?) {
+        self.tool = tool
+        toolbar?.selectTool(tool.flatMap { AnnotationTool.allCases.firstIndex(of: $0) })
+        if tool != nil { freeze() }
+    }
+
+    /// Captures the selection once and shows it in place of the live screen.
+    private func freeze() {
+        guard frozen == nil, !isFreezing else { return }
+        isFreezing = true
+        let selection = finalSelection
+        Task { [weak self] in
+            do {
+                let shot = try await Screenshotter.captureImage(selection)
+                self?.frozen = shot
+            } catch {
+                NSSound.beep()
+                self?.pick(nil)
+            }
+            self?.isFreezing = false
+            self?.needsDisplay = true
+        }
     }
 }

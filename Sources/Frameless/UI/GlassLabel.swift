@@ -5,9 +5,9 @@ final class GlassLabel: GlassPanel {
     private var item: BarButton?
 
     /// Replaces the icon and text and resizes the capsule to fit, at the bars' height.
-    func show(symbol: String, text: String) {
+    func show(icon: LucideIcon, text: String) {
         item?.removeFromSuperview()
-        let item = BarButton(symbol: symbol, title: text)
+        let item = BarButton(icon: icon, title: text)
         item.isInteractive = false
         let size = CGSize(width: item.intrinsicContentSize.width, height: Config.Bar.itemHeight)
         item.frame = CGRect(origin: CGPoint(x: Config.Bar.padding, y: Config.Bar.padding), size: size)

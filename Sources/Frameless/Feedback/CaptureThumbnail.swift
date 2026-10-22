@@ -124,11 +124,8 @@ private final class ThumbnailView: NSView, NSDraggingSource {
     private func addPlayBadge() {
         let side = Config.Feedback.badgeSize
         let badge = GlassPanel(frame: CGRect(x: 0, y: 0, width: side, height: side))
-        let config = NSImage.SymbolConfiguration(pointSize: side * 0.4, weight: .semibold)
-            .applying(NSImage.SymbolConfiguration(paletteColors: [.labelColor]))
-        let play = NSImageView(
-            image: NSImage(systemSymbolName: "play.fill", accessibilityDescription: "Recording")?
-                .withSymbolConfiguration(config) ?? NSImage())
+        let play = NSImageView(image: LucideIcon.play.image(size: side * 0.4, color: .labelColor, filled: true))
+        play.imageScaling = .scaleNone
         play.frame = badge.bounds
         play.autoresizingMask = [.width, .height]
         badge.content.addSubview(play)
@@ -143,7 +140,7 @@ private final class ThumbnailView: NSView, NSDraggingSource {
     /// Glass circle with ×, matching the bars' close button; shown on hover.
     private func addCloseButton() {
         let side = Config.Feedback.closeSize
-        let button = BarButton(symbol: "xmark", title: nil, toolTip: "Dismiss")
+        let button = BarButton(icon: .close, title: nil, toolTip: "Dismiss")
         button.target = self
         button.action = #selector(close)
         button.frame = closeControl.bounds

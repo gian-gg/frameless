@@ -102,10 +102,16 @@ enum Config {
         /// Space between the capsule and the round close button.
         static let closeGap: CGFloat = 8
         /// Space between a selection and the editor's bar under it.
-        static let selectionGap: CGFloat = 10
-        static let iconSize: CGFloat = 12
+        static let selectionGap: CGFloat = 16
+        static let iconSize: CGFloat = 14
+        /// Width of each icon-only tool button.
+        static let toolWidth: CGFloat = 32
+        /// Tool icons are dimmed to this until selected; the selected one sits on this brighter pill.
+        static let unselectedToolOpacity: CGFloat = 0.7
+        static let selectedFillOpacity: CGFloat = 0.3
         static let titleSize: CGFloat = 12
         static let shortcutSize: CGFloat = 11
+        static let shortcutIconSize: CGFloat = 12
     }
 
     /// Display and area picker.
@@ -115,10 +121,10 @@ enum Config {
         static let windowHint = "Window"
         static let displayButton = "Display"
         static let screenHint = "Display or area"
-        static let windowSymbol = "macwindow"
+        static let windowIcon = LucideIcon.appWindow
         static let windowLabelLength = 48
-        static let displaySymbol = "display"
-        static let dragSymbol = "rectangle.dashed"
+        static let displayIcon = LucideIcon.monitor
+        static let dragIcon = LucideIcon.squareDashed
         static let idleDimOpacity: CGFloat = 0.5
         static let minimumDrag: CGFloat = 4
         static let minimumWindowSize: CGFloat = 40

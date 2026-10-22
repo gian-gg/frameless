@@ -47,8 +47,8 @@ final class ShortcutRecorder {
 private final class ShortcutRecorderView: NSView {
     var onFinish: (@MainActor (ShortcutRecorder.Outcome) -> Void)?
 
-    private static let promptSymbol = "keyboard"
-    private static let warningSymbol = "exclamationmark.triangle"
+    private static let promptIcon = LucideIcon.keyboard
+    private static let warningIcon = LucideIcon.triangleAlert
 
     private let message = GlassLabel()
     private var bar: GlassBar?
@@ -65,7 +65,7 @@ private final class ShortcutRecorderView: NSView {
         let bar = GlassBar(
             items: [
                 .init(
-                    symbol: "eraser", title: "Clear", shortcut: .text("⌫"), toolTip: "Remove this shortcut",
+                    icon: .eraser, title: "Clear", shortcut: .text("⌫"), toolTip: "Remove this shortcut",
                     perform: { [weak self] in self?.onFinish?(.clear) })
             ],
             closeToolTip: "Cancel (Esc)", close: { [weak self] in self?.onFinish?(.cancel) })
@@ -100,14 +100,14 @@ private final class ShortcutRecorderView: NSView {
         onFinish?(.cancel)
     }
 
-    private func showMessage(symbol: String, text: String) {
-        isWarning = symbol == Self.warningSymbol
-        message.show(symbol: symbol, text: text)
+    private func showMessage(icon: LucideIcon, text: String) {
+        isWarning = icon == Self.warningIcon
+        message.show(icon: icon, text: text)
         needsLayout = true
     }
 
     private func showPrompt() {
-        showMessage(symbol: Self.promptSymbol, text: "Press a shortcut for \(actionName)")
+        showMessage(icon: Self.promptIcon, text: "Press a shortcut for \(actionName)")
     }
 
     /// Shows the modifiers as they're held; on release, back to the prompt unless a warning is showing.
@@ -116,7 +116,7 @@ private final class ShortcutRecorderView: NSView {
         if modifiers.isEmpty {
             if !isWarning { showPrompt() }
         } else {
-            showMessage(symbol: Self.promptSymbol, text: "\(modifiers.symbols)…")
+            showMessage(icon: Self.promptIcon, text: "\(modifiers.symbols)…")
         }
     }
 
@@ -139,7 +139,7 @@ private final class ShortcutRecorderView: NSView {
         }
         let shortcut = Shortcut(keyCode: UInt32(event.keyCode), modifiers: modifiers)
         if let reason = reasonToReject(shortcut) {
-            showMessage(symbol: Self.warningSymbol, text: "\(reason). Try another")
+            showMessage(icon: Self.warningIcon, text: "\(reason). Try another")
             return
         }
         onFinish?(.set(shortcut))

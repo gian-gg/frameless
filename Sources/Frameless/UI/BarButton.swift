@@ -2,16 +2,16 @@ import AppKit
 
 /// Glass bar item drawn as one centred group: icon, optional label, optional shortcut key cap.
 final class BarButton: NSControl {
-    /// What a key cap shows: text such as "⌘C", or an SF Symbol such as "space".
+    /// What a key cap shows: text such as "⌘C", or an icon such as the space bar.
     enum Shortcut {
         case text(String)
-        case symbol(String)
+        case icon(LucideIcon)
     }
 
     private static let keyPadding = CGSize(width: 5, height: 2)
     private static let keyRadius: CGFloat = 4
 
-    private let symbol: String
+    private let icon: LucideIcon
     private let title: String?
     private let shortcut: Shortcut?
     private var isHovering = false {
@@ -21,8 +21,8 @@ final class BarButton: NSControl {
         didSet { needsDisplay = true }
     }
 
-    init(symbol: String, title: String?, shortcut: Shortcut? = nil, toolTip: String? = nil) {
-        self.symbol = symbol
+    init(icon: LucideIcon, title: String?, shortcut: Shortcut? = nil, toolTip: String? = nil) {
+        self.icon = icon
         self.title = title
         self.shortcut = shortcut
         super.init(frame: .zero)
@@ -35,6 +35,16 @@ final class BarButton: NSControl {
     /// Off for labels: no hover, no clicks, just the drawing.
     var isInteractive = true
 
+    /// A tool toggle: its icon is dimmed until selected.
+    var isToggle = false {
+        didSet { needsDisplay = true }
+    }
+
+    /// Shown with a brighter pill and a full-strength icon, for the active tool.
+    var isSelected = false {
+        didSet { needsDisplay = true }
+    }
+
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { isInteractive }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
@@ -43,10 +53,10 @@ final class BarButton: NSControl {
 
     // MARK: - Content
 
-    private var icon: NSImage? {
-        let config = NSImage.SymbolConfiguration(pointSize: Config.Bar.iconSize, weight: .medium)
-            .applying(NSImage.SymbolConfiguration(paletteColors: [.labelColor]))
-        return NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(config)
+    private var iconImage: NSImage {
+        let color: NSColor =
+            isToggle && !isSelected ? .labelColor.withAlphaComponent(Config.Bar.unselectedToolOpacity) : .labelColor
+        return icon.image(size: Config.Bar.iconSize, color: color)
     }
 
     private var titleText: NSAttributedString? {
@@ -62,7 +72,7 @@ final class BarButton: NSControl {
 
     private static var keyFont: NSFont { Panel.font(size: Config.Bar.shortcutSize, weight: .medium) }
 
-    /// The key cap's content: text or a symbol, both sized to the key font.
+    /// The key cap's content: text or an icon, both sized to the key font.
     private var keyContent: (size: CGSize, draw: (CGRect) -> Void)? {
         switch shortcut {
         case .text(let string):
@@ -70,13 +80,8 @@ final class BarButton: NSControl {
                 string: string, attributes: [.font: Self.keyFont, .foregroundColor: NSColor.secondaryLabelColor])
             let size = text.size()
             return (size, { text.draw(at: CGPoint(x: $0.midX - size.width / 2, y: $0.midY - size.height / 2)) })
-        case .symbol(let name):
-            let config = NSImage.SymbolConfiguration(pointSize: Config.Bar.shortcutSize, weight: .medium)
-                .applying(NSImage.SymbolConfiguration(paletteColors: [.secondaryLabelColor]))
-            guard
-                let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
-                    .withSymbolConfiguration(config)
-            else { return nil }
+        case .icon(let name):
+            let image = name.image(size: Config.Bar.shortcutIconSize, color: .secondaryLabelColor)
             let size = image.size
             return (
                 size,
@@ -102,9 +107,9 @@ final class BarButton: NSControl {
         }
     }
 
-    /// Widths of the icon, label and key cap that are present, left to right.
+    /// Widths of the icon and, when present, the label and key cap, left to right.
     private var widths: [CGFloat] {
-        [icon?.size.width, titleText.map { ceil($0.size().width) }, keySize?.width].compactMap { $0 }
+        [iconImage.size.width, titleText.map { ceil($0.size().width) }, keySize?.width].compactMap { $0 }
     }
 
     private var contentWidth: CGFloat {
@@ -119,17 +124,17 @@ final class BarButton: NSControl {
     // MARK: - Drawing
 
     override func draw(_ dirtyRect: NSRect) {
-        if isInteractive, isPressed || isHovering {
-            NSColor.labelColor.withAlphaComponent(isPressed ? 0.22 : 0.1).setFill()
+        if isInteractive, isPressed || isSelected || isHovering {
+            let opacity = isSelected ? Config.Bar.selectedFillOpacity : isPressed ? 0.22 : 0.1
+            NSColor.labelColor.withAlphaComponent(opacity).setFill()
             let radius = min(bounds.width, bounds.height) / 2
             NSBezierPath(roundedRect: bounds, xRadius: radius, yRadius: radius).fill()
         }
 
         var left = ((bounds.width - contentWidth) / 2).rounded()
-        if let icon {
-            icon.draw(in: centered(icon.size, at: left))
-            left += icon.size.width + Config.Bar.innerGap
-        }
+        let image = iconImage
+        image.draw(in: centered(image.size, at: left))
+        left += image.size.width + Config.Bar.innerGap
         if let titleText {
             let size = titleText.size()
             titleText.draw(at: centered(size, at: left).origin)

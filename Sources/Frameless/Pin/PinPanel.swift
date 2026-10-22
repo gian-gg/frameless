@@ -166,7 +166,7 @@ private final class PinView: NSView {
 
     /// Glass circle with ×, matching the thumbnail's; shown on hover in the top-left corner.
     private func addCloseButton() {
-        let button = BarButton(symbol: "xmark", title: nil, toolTip: "Close (Esc)")
+        let button = BarButton(icon: .close, title: nil, toolTip: "Close (Esc)")
         button.target = self
         button.action = #selector(close)
         button.frame = closeControl.bounds
