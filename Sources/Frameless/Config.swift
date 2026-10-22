@@ -63,6 +63,10 @@ enum Config {
         static let shadowBlur: CGFloat = 2
         static let shadowOpacity: CGFloat = 0.5
         static let defaultWeight = MarkWeight.medium
+        /// How close a click must be to a line to pick it, and the selection outline's gap and dash.
+        static let hitTolerance: CGFloat = 6
+        static let selectionInset: CGFloat = 4
+        static let selectionDash: [CGFloat] = [4, 3]
         /// The gap a text field leaves before its first letter, so typed text lines up with the finished mark.
         static let textFieldInset: CGFloat = 2
         /// A step's number as a share of its circle's width.

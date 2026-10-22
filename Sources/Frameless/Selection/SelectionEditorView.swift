@@ -183,8 +183,14 @@ final class SelectionEditorView: NSView {
     }
 
     override func mouseMoved(with event: NSEvent) {
-        if let canvas, canvas.tool != nil, canvas.frame.contains(convert(event.locationInWindow, from: nil)) {
-            NSCursor.crosshair.set()
+        if let canvas, canvas.frame.contains(convert(event.locationInWindow, from: nil)) {
+            if canvas.tool != nil {
+                NSCursor.crosshair.set()
+            } else if canvas.hasMark(atWindowPoint: event.locationInWindow) {
+                NSCursor.openHand.set()
+            } else {
+                NSCursor.arrow.set()
+            }
         } else {
             Self.cursor(for: handle(at: event)).set()
         }
@@ -234,7 +240,13 @@ final class SelectionEditorView: NSView {
     override func keyDown(with event: NSEvent) {
         switch Int(event.keyCode) {
         case kVK_Escape:
-            if styleRow != nil { hideStyleRow() } else { onFinish?(nil) }
+            if styleRow != nil {
+                hideStyleRow()
+            } else if tool != nil, canvas != nil {
+                pick(nil)
+            } else {
+                onFinish?(nil)
+            }
         case kVK_Return, kVK_ANSI_KeypadEnter: choose(purpose == .screenshot ? .copy : .record)
         default:
             guard let tool = tool(for: event) else { return super.keyDown(with: event) }

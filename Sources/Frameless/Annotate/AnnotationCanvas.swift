@@ -1,11 +1,23 @@
 import AppKit
 
 /// The frozen capture with its marks, laid over the selection; dragging with a tool picked draws a mark (a click
-/// places a step or starts typing), and
+/// places a step or starts typing), with no tool it moves marks, and
 /// holding Shift keeps rectangles, highlights and pixelated areas square and lines and arrows at 45° steps.
 final class AnnotationCanvas: NSView {
     let shot: CapturedImage
-    var tool: AnnotationTool?
+    var tool: AnnotationTool? {
+        didSet {
+            if tool != nil { selection = nil }
+        }
+    }
+    /// The mark picked with no tool, and the drag moving it.
+    var selection: Int? {
+        didSet { needsDisplay = true }
+    }
+    var moveStart: CGPoint?
+    var moveOffset: CGVector? {
+        didSet { needsDisplay = true }
+    }
     var color = Config.Annotate.defaultColor
     var weight = Config.Annotate.defaultWeight
     private(set) var history = MarkHistory() {
@@ -36,18 +48,26 @@ final class AnnotationCanvas: NSView {
         history.add(mark)
     }
 
+    /// Changes existing marks as one undoable step.
+    func editMarks(_ edit: (inout [Mark]) -> Void) {
+        history.change(edit)
+    }
+
     func undo() {
+        selection = nil
         history.undo()
     }
 
     func redo() {
+        selection = nil
         history.redo()
     }
 
     override func draw(_ dirtyRect: NSRect) {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         context.draw(shot.image, in: bounds)
-        MarkRenderer.draw(history.marks + [draft].compactMap { $0 }, in: context, over: shot.image, size: bounds.size)
+        MarkRenderer.draw(shownMarks + [draft].compactMap { $0 }, in: context, over: shot.image, size: bounds.size)
+        drawSelection(in: context)
     }
 
     // MARK: - Drawing marks
@@ -55,8 +75,8 @@ final class AnnotationCanvas: NSView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     override func mouseDown(with event: NSEvent) {
-        guard let tool else { return }
         let point = location(of: event)
+        guard let tool else { return beginSelecting(at: point) }
         if tool == .steps {
             return add(Mark(tool: tool, points: [point], color: color, weight: weight))
         }
@@ -69,6 +89,7 @@ final class AnnotationCanvas: NSView {
     }
 
     override func mouseDragged(with event: NSEvent) {
+        if tool == nil { return dragSelection(to: location(of: event)) }
         guard var mark = draft, let start = mark.points.first, let last = mark.points.last else { return }
         var point = location(of: event)
         if mark.tool == .freehand {
@@ -90,6 +111,7 @@ final class AnnotationCanvas: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        if tool == nil { return endSelecting() }
         guard let mark = draft else { return }
         draft = nil
         guard let rect = MarkRenderer.bounds(of: mark),
