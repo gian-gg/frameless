@@ -130,6 +130,17 @@ enum ScreenGeometry {
         return CGPoint(x: start.x + horizontal * side, y: start.y + vertical * side)
     }
 
+    /// `end` snapped to the nearest 45° from `start`: flat or upright keeps the drag along that axis, a diagonal
+    /// becomes a square's corner inside `bounds`.
+    static func snappedEnd(from start: CGPoint, to end: CGPoint, in bounds: CGRect) -> CGPoint {
+        let width = abs(end.x - start.x)
+        let height = abs(end.y - start.y)
+        let tangent = tan(CGFloat.pi / 8)
+        if height < width * tangent { return CGPoint(x: end.x, y: start.y) }
+        if width < height * tangent { return CGPoint(x: start.x, y: end.y) }
+        return squareCorner(from: start, to: end, in: bounds)
+    }
+
     /// A frame resized to `size` while the point under `anchor` stays put.
     static func zoomedFrame(_ frame: CGRect, to size: CGSize, around anchor: CGPoint) -> CGRect {
         guard frame.width > 0, frame.height > 0 else { return CGRect(origin: frame.origin, size: size) }

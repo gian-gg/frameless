@@ -188,4 +188,15 @@ struct ScreenGeometryTests {
             from: CGPoint(x: 40, y: 40), to: end, in: CGRect(x: 0, y: 0, width: 80, height: 100))
         #expect(corner == expected)
     }
+
+    @Test(
+        "a snapped line goes flat, upright or to a square's corner, whichever direction is nearest",
+        arguments: zip(
+            [CGPoint(x: 70, y: 44), CGPoint(x: 44, y: 90), CGPoint(x: 60, y: 58), CGPoint(x: 10, y: 75)],
+            [CGPoint(x: 70, y: 40), CGPoint(x: 40, y: 90), CGPoint(x: 60, y: 60), CGPoint(x: 5, y: 75)]))
+    func snapsLine(end: CGPoint, expected: CGPoint) {
+        let snapped = ScreenGeometry.snappedEnd(
+            from: CGPoint(x: 40, y: 40), to: end, in: CGRect(x: 0, y: 0, width: 80, height: 100))
+        #expect(snapped == expected)
+    }
 }
