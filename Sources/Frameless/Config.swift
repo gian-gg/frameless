@@ -63,6 +63,8 @@ enum Config {
         static let shadowBlur: CGFloat = 2
         static let shadowOpacity: CGFloat = 0.5
         static let defaultWeight = MarkWeight.medium
+        /// The size of a pixelated block, in points, on a grid fixed to the image.
+        static let pixelateBlock: CGFloat = 12
         /// How dark the capture gets outside highlighted areas, and the light edge and soft shadow around each area.
         static let spotlightDim: CGFloat = 0.4
         static let spotlightEdgeWidth: CGFloat = 1

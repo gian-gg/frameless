@@ -133,4 +133,52 @@ struct MarkRendererTests {
         #expect(abs(overlap - 0.6) < 0.05)
         #expect(outside < 0.4)
     }
+
+    @Test("pixelating turns detail into flat blocks inside the area and leaves the outside alone")
+    func pixelates() throws {
+        let context = try #require(
+            CGContext(
+                data: nil, width: 40, height: 40, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.setFillColor(gray: 0, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
+        context.setFillColor(gray: 1, alpha: 1)
+        for column in stride(from: 0, to: 40, by: 2) {
+            context.fill(CGRect(x: column, y: 0, width: 1, height: 40))
+        }
+        let shot = CapturedImage(image: try #require(context.makeImage()), scale: 1, displayID: 1)
+        let mark = Mark(tool: .pixelate, points: [CGPoint(x: 8, y: 8), CGPoint(x: 32, y: 32)], color: .white)
+
+        let rendered = try #require(MarkRenderer.render(shot, marks: [mark]))
+        let bitmap = NSBitmapImageRep(cgImage: rendered.image)
+
+        let left = try #require(bitmap.colorAt(x: 10, y: 20)).redComponent
+        let right = try #require(bitmap.colorAt(x: 11, y: 20)).redComponent
+        #expect(abs(left - right) < 0.05)
+        #expect(left > 0.2 && left < 0.8)
+        #expect(try #require(bitmap.colorAt(x: 2, y: 20)).redComponent > 0.9)
+        #expect(try #require(bitmap.colorAt(x: 3, y: 20)).redComponent < 0.1)
+    }
+
+    @Test("pixelated blocks stay the same size and place however big the area is")
+    func pixelateGridIsFixed() throws {
+        let context = try #require(
+            CGContext(
+                data: nil, width: 60, height: 60, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        for column in 0..<60 {
+            context.setFillColor(gray: CGFloat(column) / 60, alpha: 1)
+            context.fill(CGRect(x: column, y: 0, width: 1, height: 60))
+        }
+        let shot = CapturedImage(image: try #require(context.makeImage()), scale: 1, displayID: 1)
+        let small = Mark(tool: .pixelate, points: [CGPoint(x: 13, y: 13), CGPoint(x: 30, y: 30)], color: .white)
+        let large = Mark(tool: .pixelate, points: [CGPoint(x: 2, y: 2), CGPoint(x: 58, y: 58)], color: .white)
+
+        let fromSmall = NSBitmapImageRep(cgImage: try #require(MarkRenderer.render(shot, marks: [small])).image)
+        let fromLarge = NSBitmapImageRep(cgImage: try #require(MarkRenderer.render(shot, marks: [large])).image)
+
+        let smallColor = try #require(fromSmall.colorAt(x: 26, y: 40)).redComponent
+        let largeColor = try #require(fromLarge.colorAt(x: 26, y: 40)).redComponent
+        #expect(abs(smallColor - largeColor) < 0.02)
+    }
 }

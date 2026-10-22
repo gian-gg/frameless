@@ -3,13 +3,16 @@ import CoreGraphics
 /// Draws marks, both on screen and into the exported image, so the two always match.
 enum MarkRenderer {
     /// Draws marks into a context whose units are selection points; `image` is the capture under them.
-    /// Highlights go first, as one darkened layer, so every other mark sits above it.
+    /// Pixelated areas go first, then highlights as one darkened layer, then every other mark on top.
     static func draw(_ marks: [Mark], in context: CGContext, over image: CGImage, size: CGSize) {
+        for mark in marks where mark.tool == .pixelate {
+            drawPixelate(mark, in: context, over: image, size: size)
+        }
         let highlights = marks.filter { $0.tool == .highlight }
         if !highlights.isEmpty {
             drawSpotlight(highlights, in: context, size: size)
         }
-        for mark in marks where mark.tool != .highlight {
+        for mark in marks where mark.tool != .highlight && mark.tool != .pixelate {
             draw(mark, in: context, over: image, size: size)
         }
     }
