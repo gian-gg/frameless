@@ -43,7 +43,9 @@ enum MarkRenderer {
         switch mark.tool {
         case .rectangle:
             drawRectangle(mark, in: context)
-        case .line, .arrow, .freehand, .highlight, .pixelate, .steps, .text:
+        case .line:
+            drawLine(mark, in: context)
+        case .arrow, .freehand, .highlight, .pixelate, .steps, .text:
             break
         }
     }
@@ -52,6 +54,13 @@ enum MarkRenderer {
     static func bounds(of mark: Mark) -> CGRect? {
         guard let first = mark.points.first, let last = mark.points.last else { return nil }
         return CGRect(x: first.x, y: first.y, width: last.x - first.x, height: last.y - first.y).standardized
+    }
+
+    private static func drawLine(_ mark: Mark, in context: CGContext) {
+        guard let first = mark.points.first, let last = mark.points.last else { return }
+        context.move(to: first)
+        context.addLine(to: last)
+        context.strokePath()
     }
 
     private static func drawRectangle(_ mark: Mark, in context: CGContext) {

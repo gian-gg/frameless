@@ -30,15 +30,20 @@ struct MarkRendererTests {
         #expect(rendered.displayID == 3)
     }
 
-    @Test("a rectangle is stroked along its edges and leaves its middle dark")
-    func drawsRectangle() throws {
+    /// A 40 × 40 black capture at 1×.
+    private func blackShot() throws -> CapturedImage {
         let context = try #require(
             CGContext(
                 data: nil, width: 40, height: 40, bitsPerComponent: 8, bytesPerRow: 0,
                 space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
         context.setFillColor(gray: 0, alpha: 1)
         context.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
-        let shot = CapturedImage(image: try #require(context.makeImage()), scale: 1, displayID: 1)
+        return CapturedImage(image: try #require(context.makeImage()), scale: 1, displayID: 1)
+    }
+
+    @Test("a rectangle is stroked along its edges and leaves its middle dark")
+    func drawsRectangle() throws {
+        let shot = try blackShot()
         let mark = Mark(
             tool: .rectangle, points: [CGPoint(x: 10, y: 10), CGPoint(x: 30, y: 30)], color: Config.Annotate.color)
 
@@ -49,5 +54,19 @@ struct MarkRendererTests {
         let middle = try #require(bitmap.colorAt(x: 20, y: 20))
         #expect(edge.redComponent > 0.8 && edge.blueComponent > 0.8)
         #expect(middle.redComponent < 0.1)
+    }
+
+    @Test("a line is drawn between its two points and nowhere else")
+    func drawsLine() throws {
+        let mark = Mark(
+            tool: .line, points: [CGPoint(x: 5, y: 20), CGPoint(x: 35, y: 20)], color: Config.Annotate.color)
+
+        let rendered = try #require(MarkRenderer.render(try blackShot(), marks: [mark]))
+        let bitmap = NSBitmapImageRep(cgImage: rendered.image)
+
+        let onLine = try #require(bitmap.colorAt(x: 20, y: 20))
+        let offLine = try #require(bitmap.colorAt(x: 20, y: 5))
+        #expect(onLine.redComponent > 0.8)
+        #expect(offLine.redComponent < 0.1)
     }
 }
