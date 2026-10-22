@@ -62,7 +62,7 @@ enum Config {
         /// A soft halo behind each mark, dark or light against its colour, so it shows on any screenshot.
         static let shadowBlur: CGFloat = 2
         static let shadowOpacity: CGFloat = 0.5
-        static let lineWidth: CGFloat = 3
+        static let defaultWeight = MarkWeight.medium
         static let cornerRadius: CGFloat = 3
         /// An arrowhead's arms: this many line widths long, at most this share of the arrow, at this angle.
         static let arrowHeadWidths: CGFloat = 4
@@ -125,8 +125,8 @@ enum Config {
         /// Width of each icon-only tool button.
         static let toolWidth: CGFloat = 32
         static let swatchRingOpacity: CGFloat = 0.5
-        /// Gap between the colour button and the row of colours above it.
-        static let swatchRowGap: CGFloat = 8
+        /// Gap between a style button and its row of choices above it.
+        static let styleRowGap: CGFloat = 8
         /// Tool icons are dimmed to this until selected; the selected one sits on this brighter pill.
         static let unselectedToolOpacity: CGFloat = 0.7
         static let selectedFillOpacity: CGFloat = 0.3

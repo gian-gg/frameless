@@ -9,9 +9,9 @@ final class GlassBar: NSView {
         let toolTip: String
     }
 
-    /// A colour button in its own capsule before the tools.
-    struct Swatch {
-        let color: NSColor
+    /// A style button, such as colour or thickness, in its own capsule before the tools.
+    struct Style {
+        let sample: BarButton.Sample
         let toolTip: String
         let perform: @MainActor () -> Void
     }
@@ -29,18 +29,18 @@ final class GlassBar: NSView {
 
     private var handlers: [@MainActor () -> Void] = []
     private var toolButtons: [BarButton] = []
-    private var swatchButton: BarButton?
+    private var styleButtons: [BarButton] = []
     private(set) var selectedTool: Int?
 
     init(
-        tools: [Tool] = [], swatch: Swatch? = nil, items: [Item], closeToolTip: String,
+        tools: [Tool] = [], styles: [Style] = [], items: [Item], closeToolTip: String,
         close: @escaping @MainActor () -> Void
     ) {
         super.init(frame: .zero)
         let height = Config.Bar.itemHeight + Config.Bar.padding * 2
         var capsuleLeft: CGFloat = 0
-        if let swatch {
-            let styleCapsule = styleCapsule(for: swatch, height: height)
+        if !styles.isEmpty {
+            let styleCapsule = styleCapsule(for: styles, height: height)
             addSubview(styleCapsule)
             capsuleLeft = styleCapsule.frame.maxX + Config.Bar.closeGap
         }
@@ -93,14 +93,16 @@ final class GlassBar: NSView {
         return button
     }
 
-    /// Shows a new colour in the colour button.
-    func setSwatch(_ color: NSColor) {
-        swatchButton?.swatch = color
+    /// Shows a new sample in a style button.
+    func setStyle(_ sample: BarButton.Sample, at index: Int) {
+        guard styleButtons.indices.contains(index) else { return }
+        styleButtons[index].sample = sample
     }
 
-    /// The colour button's frame in the bar's coordinates.
-    var swatchFrame: CGRect? {
-        swatchButton.map { convert($0.bounds, from: $0) }
+    /// A style button's frame in the bar's coordinates.
+    func styleFrame(at index: Int) -> CGRect? {
+        guard styleButtons.indices.contains(index) else { return nil }
+        return convert(styleButtons[index].bounds, from: styleButtons[index])
     }
 
     /// Marks one tool as selected, or none.
@@ -131,19 +133,23 @@ final class GlassBar: NSView {
         return capsule
     }
 
-    /// The style capsule, holding the colour button.
-    private func styleCapsule(for swatch: Swatch, height: CGFloat) -> GlassPanel {
-        let button = BarButton(swatch: swatch.color, toolTip: swatch.toolTip)
-        button.tag = handlers.count
-        handlers.append(swatch.perform)
-        button.target = self
-        button.action = #selector(pressed(_:))
-        button.frame = CGRect(
-            x: Config.Bar.padding, y: Config.Bar.padding, width: Config.Bar.toolWidth, height: Config.Bar.itemHeight)
-        swatchButton = button
+    /// The style capsule, holding one button per style.
+    private func styleCapsule(for styles: [Style], height: CGFloat) -> GlassPanel {
         let capsule = GlassPanel()
-        capsule.content.addSubview(button)
-        capsule.frame = CGRect(x: 0, y: 0, width: Config.Bar.toolWidth + Config.Bar.padding * 2, height: height)
+        var left = Config.Bar.padding
+        for style in styles {
+            let button = BarButton(sample: style.sample, toolTip: style.toolTip)
+            button.tag = handlers.count
+            handlers.append(style.perform)
+            button.target = self
+            button.action = #selector(pressed(_:))
+            button.frame = CGRect(
+                x: left, y: Config.Bar.padding, width: Config.Bar.toolWidth, height: Config.Bar.itemHeight)
+            capsule.content.addSubview(button)
+            styleButtons.append(button)
+            left += Config.Bar.toolWidth
+        }
+        capsule.frame = CGRect(x: 0, y: 0, width: left + Config.Bar.padding, height: height)
         return capsule
     }
 

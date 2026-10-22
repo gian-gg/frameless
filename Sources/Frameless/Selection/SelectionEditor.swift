@@ -45,6 +45,8 @@ final class SelectionEditor {
         let view = SelectionEditorView(selection: selection, purpose: purpose, scale: screen.backingScaleFactor)
         view.markColor = preferences.annotationColor
         view.onMarkColorChange = { [preferences] in preferences.annotationColor = $0 }
+        view.markWeight = preferences.annotationWeight
+        view.onMarkWeightChange = { [preferences] in preferences.annotationWeight = $0 }
         view.onFinish = { [weak self] choice in self?.finish(choice) }
         window.contentView = view
         window.makeFirstResponder(view)

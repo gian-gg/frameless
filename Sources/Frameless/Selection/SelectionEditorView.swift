@@ -9,11 +9,19 @@ final class SelectionEditorView: NSView {
     /// The colour new marks are drawn in, shown in the colour button.
     var markColor = Config.Annotate.defaultColor {
         didSet {
-            toolbar?.setSwatch(markColor.nsColor)
+            toolbar?.setStyle(.color(markColor.nsColor), at: Style.color.rawValue)
             canvas?.color = markColor
         }
     }
     var onMarkColorChange: (@MainActor (MarkColor) -> Void)?
+    /// How thick new marks are drawn, shown in the thickness button.
+    var markWeight = Config.Annotate.defaultWeight {
+        didSet {
+            toolbar?.setStyle(.stroke(markWeight.lineWidth), at: Style.weight.rawValue)
+            canvas?.weight = markWeight
+        }
+    }
+    var onMarkWeightChange: (@MainActor (MarkWeight) -> Void)?
 
     private let selection: CaptureSelection
     private let purpose: CapturePurpose
@@ -27,7 +35,15 @@ final class SelectionEditorView: NSView {
     /// The capture taken when a tool is first picked, shown in place of the live screen from then on.
     private var canvas: AnnotationCanvas?
     private var isFreezing = false
-    private var swatchRow: SwatchRow?
+    /// The style whose row of choices is open, and that row.
+    private var openStyle: Style?
+    private var styleRow: SampleRow?
+
+    /// The style buttons, in bar order.
+    private enum Style: Int, CaseIterable {
+        case color
+        case weight
+    }
 
     /// A resize or move in progress: what was grabbed, and where the pointer and selection started.
     private struct Drag {
@@ -43,7 +59,7 @@ final class SelectionEditorView: NSView {
         rect = Self.localRect(for: selection)
         super.init(frame: .zero)
         let toolbar = GlassBar(
-            tools: purpose == .screenshot ? Self.tools : [], swatch: purpose == .screenshot ? colorSwatch() : nil,
+            tools: purpose == .screenshot ? Self.tools : [], styles: purpose == .screenshot ? styleButtons() : [],
             items: barItems(),
             closeToolTip: "Close (Esc)",
             close: { [weak self] in self?.onFinish?(nil) })
@@ -137,7 +153,7 @@ final class SelectionEditorView: NSView {
                     for: toolbar.frame.size, under: rect, in: bounds, gap: Config.Bar.selectionGap,
                     inset: Config.Style.barBottomOffset))
         }
-        placeSwatchRow()
+        placeStyleRow()
         sizeTag.setFrameOrigin(
             ScreenGeometry.tagOrigin(for: sizeTag.frame.size, on: rect, in: bounds, lift: Config.Style.tagLift))
     }
@@ -217,7 +233,7 @@ final class SelectionEditorView: NSView {
     override func keyDown(with event: NSEvent) {
         switch Int(event.keyCode) {
         case kVK_Escape:
-            if swatchRow != nil { hideSwatchRow() } else { onFinish?(nil) }
+            if styleRow != nil { hideStyleRow() } else { onFinish?(nil) }
         case kVK_Return, kVK_ANSI_KeypadEnter: choose(purpose == .screenshot ? .copy : .record)
         default:
             guard let tool = tool(for: event) else { return super.keyDown(with: event) }
@@ -254,6 +270,7 @@ extension SelectionEditorView {
         let canvas = AnnotationCanvas(shot: shot, frame: rect)
         canvas.tool = tool
         canvas.color = markColor
+        canvas.weight = markWeight
         addSubview(canvas, positioned: .below, relativeTo: toolbar)
         self.canvas = canvas
     }
@@ -292,41 +309,70 @@ extension SelectionEditorView {
     }
 }
 
-// MARK: - Colour
+// MARK: - Style
 
 extension SelectionEditorView {
-    fileprivate func colorSwatch() -> GlassBar.Swatch {
-        GlassBar.Swatch(color: markColor.nsColor, toolTip: "Colour") { [weak self] in self?.toggleSwatchRow() }
+    fileprivate func styleButtons() -> [GlassBar.Style] {
+        [
+            GlassBar.Style(sample: .color(markColor.nsColor), toolTip: "Colour") { [weak self] in
+                self?.toggleStyleRow(.color)
+            },
+            GlassBar.Style(sample: .stroke(markWeight.lineWidth), toolTip: "Thickness") { [weak self] in
+                self?.toggleStyleRow(.weight)
+            },
+        ]
     }
 
-    private func toggleSwatchRow() {
-        if swatchRow != nil { return hideSwatchRow() }
-        let row = SwatchRow(
-            swatches: MarkColor.allCases.map { SwatchRow.Swatch(color: $0.nsColor, toolTip: $0.name) },
-            selected: MarkColor.allCases.firstIndex(of: markColor))
-        row.onPick = { [weak self] index in self?.pickColor(MarkColor.allCases[index]) }
+    /// Opens the style's row of choices above its button, or closes it if it's already open.
+    private func toggleStyleRow(_ style: Style) {
+        let wasOpen = openStyle == style
+        hideStyleRow()
+        guard !wasOpen else { return }
+        let row: SampleRow
+        switch style {
+        case .color:
+            row = SampleRow(
+                choices: MarkColor.allCases.map { SampleRow.Choice(sample: .color($0.nsColor), toolTip: $0.name) },
+                selected: MarkColor.allCases.firstIndex(of: markColor))
+            row.onPick = { [weak self] index in self?.pickColor(MarkColor.allCases[index]) }
+        case .weight:
+            row = SampleRow(
+                choices: MarkWeight.allCases.map { SampleRow.Choice(sample: .stroke($0.lineWidth), toolTip: $0.name) },
+                selected: MarkWeight.allCases.firstIndex(of: markWeight))
+            row.onPick = { [weak self] index in self?.pickWeight(MarkWeight.allCases[index]) }
+        }
         addSubview(row)
-        swatchRow = row
-        placeSwatchRow()
+        styleRow = row
+        openStyle = style
+        placeStyleRow()
     }
 
     private func pickColor(_ color: MarkColor) {
         markColor = color
         onMarkColorChange?(color)
-        hideSwatchRow()
+        hideStyleRow()
     }
 
-    private func hideSwatchRow() {
-        swatchRow?.removeFromSuperview()
-        swatchRow = nil
+    private func pickWeight(_ weight: MarkWeight) {
+        markWeight = weight
+        onMarkWeightChange?(weight)
+        hideStyleRow()
     }
 
-    /// Centres the row of colours just above the colour button, kept on screen.
-    private func placeSwatchRow() {
-        guard let row = swatchRow, let toolbar, let button = toolbar.swatchFrame else { return }
+    private func hideStyleRow() {
+        styleRow?.removeFromSuperview()
+        styleRow = nil
+        openStyle = nil
+    }
+
+    /// Centres the open row just above its style button, kept on screen.
+    private func placeStyleRow() {
+        guard let row = styleRow, let style = openStyle, let toolbar,
+            let button = toolbar.styleFrame(at: style.rawValue)
+        else { return }
         let anchor = convert(button, from: toolbar)
         let left = min(max(anchor.midX - row.frame.width / 2, bounds.minX), bounds.maxX - row.frame.width)
-        let bottom = toolbar.frame.maxY + Config.Bar.swatchRowGap
+        let bottom = toolbar.frame.maxY + Config.Bar.styleRowGap
         row.setFrameOrigin(CGPoint(x: left.rounded(), y: bottom.rounded()))
     }
 }

@@ -1,6 +1,6 @@
 import AppKit
 
-/// Glass bar item drawn as one centred group: icon or colour swatch, optional label, optional shortcut key cap.
+/// Glass bar item drawn as one centred group: icon or style sample, optional label, optional shortcut key cap.
 final class BarButton: NSControl {
     /// What a key cap shows, such as "⌘C".
     enum Shortcut {
@@ -11,8 +11,13 @@ final class BarButton: NSControl {
     private static let keyRadius: CGFloat = 4
 
     private let icon: LucideIcon?
-    /// A filled circle in this colour, drawn instead of an icon.
-    var swatch: NSColor? {
+    /// A style sample drawn instead of an icon: a colour dot or a line of some thickness.
+    enum Sample {
+        case color(NSColor)
+        case stroke(CGFloat)
+    }
+
+    var sample: Sample? {
         didSet { needsDisplay = true }
     }
     private let title: String?
@@ -35,9 +40,9 @@ final class BarButton: NSControl {
         setAccessibilityHelp(toolTip)
     }
 
-    convenience init(swatch: NSColor, toolTip: String) {
+    convenience init(sample: Sample, toolTip: String) {
         self.init(icon: nil, title: nil, toolTip: toolTip)
-        self.swatch = swatch
+        self.sample = sample
     }
 
     @available(*, unavailable)
@@ -67,20 +72,31 @@ final class BarButton: NSControl {
     private var iconImage: NSImage {
         let color: NSColor =
             isToggle && !isSelected ? .labelColor.withAlphaComponent(Config.Bar.unselectedToolOpacity) : .labelColor
-        if let swatch { return Self.swatchImage(swatch) }
+        if let sample { return Self.sampleImage(sample) }
         return icon?.image(size: Config.Bar.iconSize, color: color) ?? NSImage()
     }
 
-    /// A filled circle with a faint light ring, so dark colours still show on dark glass.
-    private static func swatchImage(_ color: NSColor) -> NSImage {
+    /// A filled circle with a faint light ring, so dark colours still show on dark glass, or a short line.
+    private static func sampleImage(_ sample: Sample) -> NSImage {
         let side = Config.Bar.iconSize
         return NSImage(size: CGSize(width: side, height: side), flipped: false) { bounds in
-            let circle = NSBezierPath(ovalIn: bounds.insetBy(dx: 1, dy: 1))
-            color.setFill()
-            circle.fill()
-            NSColor.white.withAlphaComponent(Config.Bar.swatchRingOpacity).setStroke()
-            circle.lineWidth = 1
-            circle.stroke()
+            switch sample {
+            case .color(let color):
+                let circle = NSBezierPath(ovalIn: bounds.insetBy(dx: 1, dy: 1))
+                color.setFill()
+                circle.fill()
+                NSColor.white.withAlphaComponent(Config.Bar.swatchRingOpacity).setStroke()
+                circle.lineWidth = 1
+                circle.stroke()
+            case .stroke(let width):
+                let line = NSBezierPath()
+                line.move(to: CGPoint(x: bounds.minX + width / 2, y: bounds.midY))
+                line.line(to: CGPoint(x: bounds.maxX - width / 2, y: bounds.midY))
+                line.lineWidth = width
+                line.lineCapStyle = .round
+                NSColor.labelColor.setStroke()
+                line.stroke()
+            }
             return true
         }
     }

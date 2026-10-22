@@ -102,4 +102,14 @@ struct PreferencesTests {
         Preferences(defaults: defaults).annotationColor = .red
         #expect(Preferences(defaults: defaults).annotationColor == .red)
     }
+
+    @Test("the mark thickness starts medium and is remembered once changed")
+    func storesAnnotationWeight() throws {
+        let defaults = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        #expect(Preferences(defaults: defaults).annotationWeight == .medium)
+        Preferences(defaults: defaults).annotationWeight = .thick
+        #expect(Preferences(defaults: defaults).annotationWeight == .thick)
+    }
 }

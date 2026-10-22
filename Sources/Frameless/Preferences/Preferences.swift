@@ -12,6 +12,7 @@ final class Preferences {
         static let resolution = "resolution"
         static let playsSounds = "playsSounds"
         static let annotationColor = "annotationColor"
+        static let annotationWeight = "annotationWeight"
         static func shortcut(_ action: Hotkeys.Action) -> String { "shortcut.\(action)" }
         static func saveFolder(_ purpose: CapturePurpose) -> String { "saveFolder.\(purpose)" }
     }
@@ -77,6 +78,15 @@ final class Preferences {
                 ?? Config.Annotate.defaultColor
         }
         set { defaults.set(newValue.rawValue, forKey: Key.annotationColor) }
+    }
+
+    /// How thick new marks are drawn.
+    var annotationWeight: MarkWeight {
+        get {
+            defaults.string(forKey: Key.annotationWeight).flatMap(MarkWeight.init(rawValue:))
+                ?? Config.Annotate.defaultWeight
+        }
+        set { defaults.set(newValue.rawValue, forKey: Key.annotationWeight) }
     }
 
     /// An action's shortcut: the default until changed, nil once cleared.

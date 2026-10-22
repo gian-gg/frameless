@@ -33,7 +33,7 @@ enum MarkRenderer {
         context.saveGState()
         defer { context.restoreGState() }
         context.setStrokeColor(mark.color.cgColor)
-        context.setLineWidth(Config.Annotate.lineWidth)
+        context.setLineWidth(mark.weight.lineWidth)
         context.setLineJoin(.round)
         context.setLineCap(.round)
         let pixelsPerPoint = abs(context.ctm.a)
@@ -73,7 +73,7 @@ enum MarkRenderer {
         let length = hypot(end.x - start.x, end.y - start.y)
         guard length > 0 else { return }
         let headLength = min(
-            Config.Annotate.lineWidth * Config.Annotate.arrowHeadWidths, length * Config.Annotate.arrowHeadShare)
+            mark.weight.lineWidth * Config.Annotate.arrowHeadWidths, length * Config.Annotate.arrowHeadShare)
         let angle = atan2(end.y - start.y, end.x - start.x)
         context.move(to: start)
         context.addLine(to: end)

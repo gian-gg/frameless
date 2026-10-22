@@ -1,20 +1,20 @@
 import AppKit
 
-/// A glass capsule of colour swatches with one marked as chosen; picking one reports its index.
-final class SwatchRow: GlassPanel {
-    struct Swatch {
-        let color: NSColor
+/// A glass capsule of style samples, such as colours or line thicknesses, with one marked as chosen.
+final class SampleRow: GlassPanel {
+    struct Choice {
+        let sample: BarButton.Sample
         let toolTip: String
     }
 
     var onPick: (@MainActor (Int) -> Void)?
 
-    init(swatches: [Swatch], selected: Int?) {
+    init(choices: [Choice], selected: Int?) {
         super.init(frame: .zero)
         let side = Config.Bar.itemHeight
         var left = Config.Bar.padding
-        for (index, swatch) in swatches.enumerated() {
-            let button = BarButton(swatch: swatch.color, toolTip: swatch.toolTip)
+        for (index, choice) in choices.enumerated() {
+            let button = BarButton(sample: choice.sample, toolTip: choice.toolTip)
             button.isSelected = index == selected
             button.tag = index
             button.target = self
@@ -29,7 +29,7 @@ final class SwatchRow: GlassPanel {
     @available(*, unavailable)
     required init?(coder: NSCoder) { nil }
 
-    /// Clicks on the glass between swatches stop here instead of reaching the editor behind.
+    /// Clicks on the glass between samples stop here instead of reaching the editor behind.
     override func mouseDown(with event: NSEvent) {}
 
     override func mouseUp(with event: NSEvent) {}

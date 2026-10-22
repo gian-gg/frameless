@@ -6,6 +6,7 @@ final class AnnotationCanvas: NSView {
     let shot: CapturedImage
     var tool: AnnotationTool?
     var color = Config.Annotate.defaultColor
+    var weight = Config.Annotate.defaultWeight
     private(set) var history = MarkHistory() {
         didSet { needsDisplay = true }
     }
@@ -52,7 +53,8 @@ final class AnnotationCanvas: NSView {
     override func mouseDown(with event: NSEvent) {
         guard let tool else { return }
         let point = location(of: event)
-        draft = Mark(tool: tool, points: tool == .freehand ? [point] : [point, point], color: color)
+        draft = Mark(
+            tool: tool, points: tool == .freehand ? [point] : [point, point], color: color, weight: weight)
     }
 
     override func mouseDragged(with event: NSEvent) {
