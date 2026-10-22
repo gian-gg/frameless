@@ -119,6 +119,17 @@ enum ScreenGeometry {
         return (even(size.width), even(size.height))
     }
 
+    /// The corner opposite `start` for a square towards `end`: the longer side wins, shrunk to fit `bounds`.
+    static func squareCorner(from start: CGPoint, to end: CGPoint, in bounds: CGRect) -> CGPoint {
+        let horizontal: CGFloat = end.x < start.x ? -1 : 1
+        let vertical: CGFloat = end.y < start.y ? -1 : 1
+        let room = min(
+            horizontal < 0 ? start.x - bounds.minX : bounds.maxX - start.x,
+            vertical < 0 ? start.y - bounds.minY : bounds.maxY - start.y)
+        let side = min(max(abs(end.x - start.x), abs(end.y - start.y)), room)
+        return CGPoint(x: start.x + horizontal * side, y: start.y + vertical * side)
+    }
+
     /// A frame resized to `size` while the point under `anchor` stays put.
     static func zoomedFrame(_ frame: CGRect, to size: CGSize, around anchor: CGPoint) -> CGRect {
         guard frame.width > 0, frame.height > 0 else { return CGRect(origin: frame.origin, size: size) }

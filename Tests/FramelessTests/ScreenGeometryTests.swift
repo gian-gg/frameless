@@ -177,4 +177,15 @@ struct ScreenGeometryTests {
             frame, to: CGSize(width: 100, height: 50), around: CGPoint(x: 200, y: 150))
         #expect(zoomed == CGRect(x: 150, y: 125, width: 100, height: 50))
     }
+
+    @Test(
+        "a square takes the longer side in the drag's direction and fits inside the bounds",
+        arguments: zip(
+            [CGPoint(x: 60, y: 30), CGPoint(x: 20, y: 80), CGPoint(x: 0, y: 40), CGPoint(x: 100, y: 100)],
+            [CGPoint(x: 60, y: 20), CGPoint(x: 0, y: 80), CGPoint(x: 0, y: 80), CGPoint(x: 80, y: 80)]))
+    func squaresDrag(end: CGPoint, expected: CGPoint) {
+        let corner = ScreenGeometry.squareCorner(
+            from: CGPoint(x: 40, y: 40), to: end, in: CGRect(x: 0, y: 0, width: 80, height: 100))
+        #expect(corner == expected)
+    }
 }

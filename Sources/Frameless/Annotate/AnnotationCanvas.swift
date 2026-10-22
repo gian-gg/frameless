@@ -1,6 +1,7 @@
 import AppKit
 
-/// The frozen capture with its marks, laid over the selection; dragging with a tool picked draws a mark.
+/// The frozen capture with its marks, laid over the selection; dragging with a tool picked draws a mark, and
+/// holding Shift keeps rectangles square.
 final class AnnotationCanvas: NSView {
     let shot: CapturedImage
     var tool: AnnotationTool?
@@ -54,8 +55,12 @@ final class AnnotationCanvas: NSView {
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard var mark = draft else { return }
-        mark.points[mark.points.count - 1] = location(of: event)
+        guard var mark = draft, let start = mark.points.first else { return }
+        var point = location(of: event)
+        if mark.tool == .rectangle, event.modifierFlags.contains(.shift) {
+            point = ScreenGeometry.squareCorner(from: start, to: point, in: bounds)
+        }
+        mark.points[mark.points.count - 1] = point
         draft = mark
     }
 
