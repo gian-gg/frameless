@@ -67,7 +67,7 @@ struct ScreenGeometryTests {
     }
 
     @Test(
-        "centres the bar under the capture, inside its bottom when there's no room, and keeps it on screen",
+        "puts the bar under the capture's right edge, inside its bottom when there's no room, and keeps it on screen",
         arguments: zip(
             [
                 CGRect(x: 100, y: 300, width: 400, height: 200),
@@ -76,9 +76,9 @@ struct ScreenGeometryTests {
                 CGRect(x: 0, y: 300, width: 50, height: 100),
             ],
             [
-                CGPoint(x: 240, y: 250),
-                CGPoint(x: 240, y: 76),
-                CGPoint(x: 440, y: 56),
+                CGPoint(x: 380, y: 250),
+                CGPoint(x: 380, y: 76),
+                CGPoint(x: 870, y: 56),
                 CGPoint(x: 10, y: 250),
             ]))
     func barPlacement(rect: CGRect, expected: CGPoint) {
