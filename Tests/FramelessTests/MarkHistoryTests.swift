@@ -42,4 +42,26 @@ struct MarkHistoryTests {
         #expect(history == MarkHistory())
         #expect(!history.canUndo)
     }
+
+    @Test("an edit to an existing mark undoes back to how it was")
+    func undoesEdits() {
+        var history = MarkHistory()
+        history.add(mark(1))
+        history.change { $0[0].points = [CGPoint(x: 9, y: 9)] }
+
+        #expect(history.marks[0].points == [CGPoint(x: 9, y: 9)])
+        history.undo()
+        #expect(history.marks == [mark(1)])
+        history.redo()
+        #expect(history.marks[0].points == [CGPoint(x: 9, y: 9)])
+    }
+
+    @Test("an edit that changes nothing isn't an undo step")
+    func ignoresEmptyEdits() {
+        var history = MarkHistory()
+        history.add(mark(1))
+        history.change { _ in }
+        history.undo()
+        #expect(history.marks.isEmpty)
+    }
 }
