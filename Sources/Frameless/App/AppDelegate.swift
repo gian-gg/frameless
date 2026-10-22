@@ -16,7 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let selector = AreaSelector()
     private let outline = AreaOutline()
     private let thumbnail = CaptureThumbnail()
-    private let pins = PinBoard()
+    let pins = PinBoard()
     private let editor = SelectionEditor()
     let hotkeys = Hotkeys()
     let shortcutRecorder = ShortcutRecorder()
@@ -34,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         buildRecordingMenu()
         recorder.onEndedEarly = { [weak self] end in self?.recordingEndedEarly(end) }
         hotkeys.onPress = { [weak self] action in self?.hotkeyPressed(action) }
+        setUpPins()
         let unavailable = registerShortcuts()
         showIdle()
         reportUnavailableShortcuts(unavailable)
@@ -64,6 +65,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         menu.addItem(captureItem("Take Screenshot", action: #selector(takeScreenshot), shortcut: .screenshot))
         menu.addItem(captureItem("Record Screen", action: #selector(startRecording), shortcut: .record))
+        if pins.hasPins {
+            menu.addItem(withTitle: "Close All Pins", action: #selector(closeAllPins), keyEquivalent: "").target = self
+        }
         menu.addItem(.separator())
         menu.addItem(withTitle: "Preferences", action: nil, keyEquivalent: "").submenu = makePreferencesMenu()
         menu.addItem(.separator())
@@ -173,7 +177,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func playSound(_ sound: CaptureSound) {
+    func playSound(_ sound: CaptureSound) {
         if preferences.playsSounds { sound.play() }
     }
 
@@ -299,6 +303,13 @@ extension AppDelegate {
 
 extension AppDelegate {
     /// Picks a display, area or window with the overlay, then captures it.
+    /// Saves a capture to the screenshots folder with the shutter sound and the thumbnail.
+    func saveScreenshot(_ shot: CapturedImage) throws {
+        let url = try Screenshotter.save(shot, in: saveFolder(for: .screenshot))
+        playSound(.screenshot)
+        thumbnail.show(url, on: NSScreen.screens.first { $0.displayID == shot.displayID })
+    }
+
     @objc private func takeScreenshot() {
         guard case .idle = state, hasScreenRecordingAccess() else { return }
         state = .busy
@@ -320,9 +331,7 @@ extension AppDelegate {
                     Screenshotter.copy(shot)
                     playSound(.screenshot)
                 case .save:
-                    let url = try Screenshotter.save(shot, in: saveFolder(for: .screenshot))
-                    playSound(.screenshot)
-                    thumbnail.show(url, on: NSScreen.screens.first { $0.displayID == shot.displayID })
+                    try saveScreenshot(shot)
                 case .pin:
                     pins.pin(shot, over: PinBoard.frame(of: choice.selection))
                     playSound(.screenshot)

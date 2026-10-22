@@ -1,17 +1,21 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Floating window holding one pinned screenshot; drag to move, scroll or pinch to zoom, ⌥-scroll to fade.
+/// Floating window holding one pinned screenshot; drag to move, scroll or pinch to zoom, ⌥-scroll to fade,
+/// right-click for the rest.
 final class PinPanel: NSPanel {
     var onClose: (@MainActor () -> Void)?
+    var onCloseAll: (@MainActor () -> Void)?
+    var onCopy: (@MainActor () -> Void)?
+    var onSave: (@MainActor () -> Void)?
 
     private let naturalSize: CGSize
     private var zoom: CGFloat = 1
     private let pinView: PinView
 
-    init(image: CGImage, frame: CGRect) {
+    init(shot: CapturedImage, frame: CGRect) {
         naturalSize = frame.size
-        pinView = PinView(image: image)
+        pinView = PinView(image: shot.image)
         super.init(
             contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         level = .floating
@@ -27,6 +31,9 @@ final class PinPanel: NSPanel {
         pinView.onClose = { [weak self] in self?.onClose?() }
         pinView.onZoom = { [weak self] factor in self?.zoom(by: factor, around: NSEvent.mouseLocation) }
         pinView.onFade = { [weak self] change in self?.fade(by: change) }
+        pinView.onCopy = { [weak self] in self?.onCopy?() }
+        pinView.onSave = { [weak self] in self?.onSave?() }
+        pinView.menu = makeMenu()
         contentView = pinView
         makeFirstResponder(pinView)
     }
@@ -46,8 +53,67 @@ final class PinPanel: NSPanel {
 
     /// Changes the pin's opacity within its limits.
     func fade(by change: CGFloat) {
-        alphaValue = min(max(alphaValue + change, Config.Pin.minOpacity), 1)
+        setOpacity(alphaValue + change)
+    }
+
+    private func setOpacity(_ opacity: CGFloat) {
+        alphaValue = min(max(opacity, Config.Pin.minOpacity), 1)
         pinView.flash("Opacity \(Int((alphaValue * 100).rounded()))%")
+    }
+
+    // MARK: - Menu
+
+    private func makeMenu() -> NSMenu {
+        let menu = NSMenu()
+        menu.addItem(item("Copy", #selector(copyPin), key: "c"))
+        menu.addItem(item("Save", #selector(savePin), key: "s"))
+        menu.addItem(.separator())
+        menu.addItem(item("Actual Size", #selector(actualSize)))
+        let opacity = NSMenu()
+        for percent in Config.Pin.opacityChoices {
+            let choice = item("\(percent)%", #selector(chooseOpacity(_:)))
+            choice.tag = percent
+            opacity.addItem(choice)
+        }
+        opacity.addItem(.separator())
+        opacity.addItem(withTitle: "⌥ + Scroll to Adjust", action: nil, keyEquivalent: "")
+        menu.addItem(withTitle: "Opacity", action: nil, keyEquivalent: "").submenu = opacity
+        menu.addItem(.separator())
+        menu.addItem(item("Close", #selector(closePin), key: "\u{1b}", modifiers: []))
+        menu.addItem(item("Close All Pins", #selector(closeAllPins)))
+        return menu
+    }
+
+    private func item(
+        _ title: String, _ action: Selector, key: String = "", modifiers: NSEvent.ModifierFlags = .command
+    ) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+        item.keyEquivalentModifierMask = modifiers
+        item.target = self
+        return item
+    }
+
+    @objc private func copyPin() { onCopy?() }
+
+    @objc private func savePin() { onSave?() }
+
+    @objc private func actualSize() {
+        zoom(by: 1 / zoom, around: CGPoint(x: frame.midX, y: frame.midY))
+    }
+
+    @objc private func chooseOpacity(_ sender: NSMenuItem) {
+        setOpacity(CGFloat(sender.tag) / 100)
+    }
+
+    @objc private func closePin() { onClose?() }
+
+    @objc private func closeAllPins() { onCloseAll?() }
+
+    override func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(chooseOpacity(_:)) {
+            menuItem.state = Int((alphaValue * 100).rounded()) == menuItem.tag ? .on : .off
+        }
+        return true
     }
 }
 
@@ -56,6 +122,8 @@ private final class PinView: NSView {
     var onClose: (@MainActor () -> Void)?
     var onZoom: (@MainActor (CGFloat) -> Void)?
     var onFade: (@MainActor (CGFloat) -> Void)?
+    var onCopy: (@MainActor () -> Void)?
+    var onSave: (@MainActor () -> Void)?
 
     private let valueTag = GlassTag()
     private var hideTagTask: Task<Void, Never>?
@@ -132,6 +200,18 @@ private final class PinView: NSView {
         } else {
             super.keyDown(with: event)
         }
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard window?.isKeyWindow == true,
+            event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command
+        else { return super.performKeyEquivalent(with: event) }
+        switch Int(event.keyCode) {
+        case kVK_ANSI_C: onCopy?()
+        case kVK_ANSI_S: onSave?()
+        default: return super.performKeyEquivalent(with: event)
+        }
+        return true
     }
 
     // MARK: - Zoom and fade

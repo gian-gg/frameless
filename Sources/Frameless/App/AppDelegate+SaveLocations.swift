@@ -58,7 +58,8 @@ extension AppDelegate {
         refreshMenu()
     }
 
-    private func refreshMenu() {
+    /// Rebuilds the menu so it reflects the current settings and pins.
+    func refreshMenu() {
         menu = makeMenu()
         if case .idle = state { showIdle() }
     }
