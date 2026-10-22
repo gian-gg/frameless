@@ -1,6 +1,6 @@
 import AppKit
 
-/// A glass tooltip drawn inside the button's own window, since overlays sit above macOS's tooltips.
+/// A glass tooltip drawn inside the button's own window.
 @MainActor
 final class HoverTip {
     private let tag = GlassTag()

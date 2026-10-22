@@ -5,20 +5,14 @@ extension AnnotationCanvas: NSTextFieldDelegate {
     var isEditingText: Bool { textField != nil }
 
     func beginText(at point: CGPoint) {
-        let font = MarkRenderer.textFont(for: weight) as NSFont
         let field = NSTextField(string: "")
         field.isBordered = false
         field.drawsBackground = false
         field.focusRingType = .none
         field.usesSingleLineMode = true
-        field.font = font
-        field.textColor = color.nsColor
         field.delegate = self
-        let halo = NSShadow()
-        halo.shadowBlurRadius = Config.Annotate.shadowBlur
-        halo.shadowColor = NSColor(cgColor: color.halo)
-        field.shadow = halo
         textField = field
+        styleTextField()
         textPoint = point
         addSubview(field)
         placeTextField()
@@ -40,13 +34,26 @@ extension AnnotationCanvas: NSTextFieldDelegate {
     }
 
     private func endText() {
-        textField?.removeFromSuperview()
+        let field = textField
         textField = nil
+        field?.removeFromSuperview()
         window?.makeFirstResponder(superview)
     }
 
+    /// Gives the open field the current colour, size and halo, matching the mark it will become.
+    func styleTextField() {
+        guard let field = textField else { return }
+        field.font = MarkRenderer.textFont(for: weight) as NSFont
+        field.textColor = color.nsColor
+        let halo = NSShadow()
+        halo.shadowBlurRadius = Config.Annotate.shadowBlur
+        halo.shadowColor = NSColor(cgColor: color.halo)
+        field.shadow = halo
+        placeTextField()
+    }
+
     /// Sizes the field to the text being typed and lines its baseline up with where the finished mark will sit.
-    private func placeTextField() {
+    func placeTextField() {
         guard let field = textField, let font = field.font else { return }
         field.sizeToFit()
         let typed = field.currentEditor()?.string ?? field.stringValue
@@ -61,6 +68,10 @@ extension AnnotationCanvas: NSTextFieldDelegate {
 
     func controlTextDidChange(_ notification: Notification) {
         placeTextField()
+    }
+
+    func controlTextDidEndEditing(_ notification: Notification) {
+        commitText()
     }
 
     func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {

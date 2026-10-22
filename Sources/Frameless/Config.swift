@@ -59,7 +59,7 @@ enum Config {
     /// Marks drawn on a frozen screenshot.
     enum Annotate {
         static let defaultColor = MarkColor.white
-        /// A soft halo behind each mark, dark or light against its colour, so it shows on any screenshot.
+        /// A soft halo behind each mark, dark or light against its colour.
         static let shadowBlur: CGFloat = 2
         static let shadowOpacity: CGFloat = 0.5
         static let defaultWeight = MarkWeight.medium
@@ -67,7 +67,7 @@ enum Config {
         static let hitTolerance: CGFloat = 6
         static let selectionInset: CGFloat = 4
         static let selectionDash: [CGFloat] = [4, 3]
-        /// The gap a text field leaves before its first letter, so typed text lines up with the finished mark.
+        /// The gap a text field leaves before its first letter.
         static let textFieldInset: CGFloat = 2
         /// A step's number as a share of its circle's width.
         static let stepTextShare: CGFloat = 0.55

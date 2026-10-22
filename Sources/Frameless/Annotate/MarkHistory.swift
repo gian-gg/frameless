@@ -5,9 +5,6 @@ struct MarkHistory: Equatable {
     private var past: [[Mark]] = []
     private var future: [[Mark]] = []
 
-    var canUndo: Bool { !past.isEmpty }
-    var canRedo: Bool { !future.isEmpty }
-
     mutating func add(_ mark: Mark) {
         change { $0.append(mark) }
     }

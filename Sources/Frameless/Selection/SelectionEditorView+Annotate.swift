@@ -39,6 +39,7 @@ extension SelectionEditorView {
     private func freeze() {
         guard canvas == nil, !isFreezing else { return }
         isFreezing = true
+        drag = nil
         let selection = finalSelection
         Task { [weak self] in
             do {

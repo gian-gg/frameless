@@ -30,7 +30,7 @@ final class SelectionEditorView: NSView {
     var rect: CGRect
     var toolbar: GlassBar?
     private let sizeTag = GlassTag()
-    private var drag: Drag?
+    var drag: Drag?
     var tool: AnnotationTool?
     /// The capture taken when a tool is first picked, shown in place of the live screen from then on.
     var canvas: AnnotationCanvas?
@@ -46,7 +46,7 @@ final class SelectionEditorView: NSView {
     }
 
     /// A resize or move in progress: what was grabbed, and where the pointer and selection started.
-    private struct Drag {
+    struct Drag {
         let handle: ScreenGeometry.ResizeHandle
         let start: CGPoint
         let startRect: CGRect
@@ -244,6 +244,8 @@ final class SelectionEditorView: NSView {
                 hideStyleRow()
             } else if tool != nil, canvas != nil {
                 pick(nil)
+            } else if canvas?.selection != nil {
+                canvas?.selection = nil
             } else {
                 onFinish?(nil)
             }
@@ -257,16 +259,32 @@ final class SelectionEditorView: NSView {
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting(.capsLock)
         guard purpose == .screenshot else { return super.performKeyEquivalent(with: event) }
+        if canvas?.isEditingText == true, let edit = Self.textEdit(for: Int(event.keyCode), modifiers) {
+            return NSApp.sendAction(edit, to: nil, from: self)
+        }
         switch (Int(event.keyCode), modifiers) {
         case (kVK_ANSI_C, .command): choose(.copy)
         case (kVK_ANSI_S, .command): choose(.save)
         case (kVK_ANSI_P, .command): choose(.pin)
-        case (kVK_ANSI_Z, .command) where canvas?.isEditingText != true: canvas?.undo()
-        case (kVK_ANSI_Z, [.command, .shift]) where canvas?.isEditingText != true: canvas?.redo()
+        case (kVK_ANSI_Z, .command): canvas?.undo()
+        case (kVK_ANSI_Z, [.command, .shift]): canvas?.redo()
         default: return super.performKeyEquivalent(with: event)
         }
         return true
+    }
+
+    /// The standard text-editing action for a shortcut while typing, since the app has no Edit menu to supply them.
+    private static func textEdit(for keyCode: Int, _ modifiers: NSEvent.ModifierFlags) -> Selector? {
+        switch (keyCode, modifiers) {
+        case (kVK_ANSI_X, .command): #selector(NSText.cut(_:))
+        case (kVK_ANSI_C, .command): #selector(NSText.copy(_:))
+        case (kVK_ANSI_V, .command): #selector(NSText.paste(_:))
+        case (kVK_ANSI_A, .command): #selector(NSText.selectAll(_:))
+        case (kVK_ANSI_Z, .command): Selector(("undo:"))
+        case (kVK_ANSI_Z, [.command, .shift]): Selector(("redo:"))
+        default: nil
+        }
     }
 }

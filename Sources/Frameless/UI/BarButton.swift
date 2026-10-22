@@ -76,7 +76,7 @@ final class BarButton: NSControl {
         return icon?.image(size: Config.Bar.iconSize, color: color) ?? NSImage()
     }
 
-    /// A filled circle with a faint light ring, so dark colours still show on dark glass, or a short line.
+    /// A colour dot with a faint light ring, or a short line of the given thickness.
     private static func sampleImage(_ sample: Sample) -> NSImage {
         let side = Config.Bar.iconSize
         return NSImage(size: CGSize(width: side, height: side), flipped: false) { bounds in

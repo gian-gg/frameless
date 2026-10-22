@@ -1,6 +1,6 @@
 import CoreGraphics
 
-/// Draws marks, both on screen and into the exported image, so the two always match.
+/// Draws marks on screen and into the exported image.
 enum MarkRenderer {
     /// Draws marks into a context whose units are selection points; `image` is the capture under them.
     /// Pixelated areas go first, then highlights as one darkened layer, then other marks, then numbered steps.
@@ -20,16 +20,18 @@ enum MarkRenderer {
         }
     }
 
-    /// The capture with its marks drawn on, at the capture's own pixel size.
+    /// The capture with its marks drawn on, at the capture's own pixel size and in its colour space.
     static func render(_ shot: CapturedImage, marks: [Mark]) -> CapturedImage? {
         guard !marks.isEmpty else { return shot }
         let width = shot.image.width
         let height = shot.image.height
+        let spaces = [shot.image.colorSpace, CGColorSpace(name: CGColorSpace.sRGB)].compactMap { $0 }
         guard
-            let context = CGContext(
-                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-                space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            let context = spaces.lazy.compactMap({
+                CGContext(
+                    data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: $0,
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            }).first
         else { return nil }
         context.draw(shot.image, in: CGRect(x: 0, y: 0, width: width, height: height))
         context.scaleBy(x: shot.scale, y: shot.scale)
@@ -80,7 +82,7 @@ enum MarkRenderer {
         context.strokePath()
     }
 
-    /// A line with an open head of two arms at its end, stroked as one path so they share a halo.
+    /// A line with an open head of two arms at its end, stroked as one path.
     private static func drawArrow(_ mark: Mark, in context: CGContext) {
         guard let start = mark.points.first, let end = mark.points.last else { return }
         let length = hypot(end.x - start.x, end.y - start.y)
@@ -98,8 +100,7 @@ enum MarkRenderer {
         context.strokePath()
     }
 
-    /// Darkens everything outside the highlighted areas, cutting each area out of one dark sheet so overlaps stay
-    /// bright, then lifts each area with a soft shadow and a light edge.
+    /// Darkens everything outside the highlighted areas, with a soft shadow and a light edge around each.
     private static func drawSpotlight(_ marks: [Mark], in context: CGContext, size: CGSize) {
         let areas = marks.compactMap(spotlightPath(for:))
         context.saveGState()

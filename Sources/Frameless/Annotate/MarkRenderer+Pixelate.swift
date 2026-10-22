@@ -2,8 +2,7 @@ import CoreGraphics
 import Foundation
 
 extension MarkRenderer {
-    /// Replaces the mark's area with blocks averaged from the capture's own pixels, so the content is gone rather
-    /// than covered. Blocks sit on a fixed grid across the image, so resizing the area never resizes or shifts them.
+    /// Replaces the mark's area with blocks averaged from the capture's pixels, on a grid fixed to the image.
     static func drawPixelate(_ mark: Mark, in context: CGContext, over image: CGImage, size: CGSize) {
         let canvas = CGRect(origin: .zero, size: size)
         guard let area = bounds(of: mark)?.intersection(canvas), !area.isNull, area.width >= 1, area.height >= 1

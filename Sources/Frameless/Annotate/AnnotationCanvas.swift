@@ -1,12 +1,12 @@
 import AppKit
 
-/// The frozen capture with its marks, laid over the selection; dragging with a tool picked draws a mark (a click
-/// places a step or starts typing), with no tool it moves marks, and
-/// holding Shift keeps rectangles, highlights and pixelated areas square and lines and arrows at 45° steps.
+/// The frozen capture with its marks: tools draw them, with Shift squaring boxes and snapping lines to 45°, and with no
+/// tool picked marks can be selected, moved, restyled or deleted.
 final class AnnotationCanvas: NSView {
     let shot: CapturedImage
     var tool: AnnotationTool? {
         didSet {
+            draft = nil
             if tool != nil { selection = nil }
         }
     }
@@ -18,8 +18,12 @@ final class AnnotationCanvas: NSView {
     var moveOffset: CGVector? {
         didSet { needsDisplay = true }
     }
-    var color = Config.Annotate.defaultColor
-    var weight = Config.Annotate.defaultWeight
+    var color = Config.Annotate.defaultColor {
+        didSet { styleTextField() }
+    }
+    var weight = Config.Annotate.defaultWeight {
+        didSet { styleTextField() }
+    }
     private(set) var history = MarkHistory() {
         didSet { needsDisplay = true }
     }

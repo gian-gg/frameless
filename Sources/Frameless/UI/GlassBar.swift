@@ -30,7 +30,7 @@ final class GlassBar: NSView {
     private var handlers: [@MainActor () -> Void] = []
     private var toolButtons: [BarButton] = []
     private var styleButtons: [BarButton] = []
-    private(set) var selectedTool: Int?
+    private var selectedTool: Int?
 
     init(
         tools: [Tool] = [], styles: [Style] = [], items: [Item], closeToolTip: String,

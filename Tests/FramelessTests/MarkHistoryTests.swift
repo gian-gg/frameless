@@ -16,11 +16,9 @@ struct MarkHistoryTests {
 
         history.undo()
         #expect(history.marks == [mark(1)])
-        #expect(history.canRedo)
 
         history.redo()
         #expect(history.marks == [mark(1), mark(2)])
-        #expect(!history.canRedo)
     }
 
     @Test("a new mark clears what could be redone")
@@ -29,8 +27,6 @@ struct MarkHistoryTests {
         history.add(mark(1))
         history.undo()
         history.add(mark(2))
-
-        #expect(!history.canRedo)
         #expect(history.marks == [mark(2)])
     }
 
@@ -40,7 +36,6 @@ struct MarkHistoryTests {
         history.undo()
         history.redo()
         #expect(history == MarkHistory())
-        #expect(!history.canUndo)
     }
 
     @Test("an edit to an existing mark undoes back to how it was")
