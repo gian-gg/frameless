@@ -60,7 +60,9 @@ enum MarkRenderer {
             drawArrow(mark, in: context)
         case .freehand:
             drawFreehand(mark, in: context)
-        case .highlight, .pixelate, .steps, .text:
+        case .text:
+            drawText(mark, in: context)
+        case .highlight, .pixelate, .steps:
             break
         }
     }

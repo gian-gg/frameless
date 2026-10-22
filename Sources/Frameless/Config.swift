@@ -63,6 +63,8 @@ enum Config {
         static let shadowBlur: CGFloat = 2
         static let shadowOpacity: CGFloat = 0.5
         static let defaultWeight = MarkWeight.medium
+        /// The gap a text field leaves before its first letter, so typed text lines up with the finished mark.
+        static let textFieldInset: CGFloat = 2
         /// A step's number as a share of its circle's width.
         static let stepTextShare: CGFloat = 0.55
         /// The size of a pixelated block, in points, on a grid fixed to the image.

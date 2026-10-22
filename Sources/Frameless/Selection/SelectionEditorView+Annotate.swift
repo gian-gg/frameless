@@ -28,6 +28,7 @@ extension SelectionEditorView {
 
     /// Selects a tool, or none; the first tool picked freezes the selection.
     func pick(_ tool: AnnotationTool?) {
+        canvas?.commitText()
         self.tool = tool
         toolbar?.selectTool(tool.flatMap { AnnotationTool.allCases.firstIndex(of: $0) })
         canvas?.tool = tool

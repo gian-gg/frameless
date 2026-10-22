@@ -202,4 +202,26 @@ struct MarkRendererTests {
         #expect(edge.redComponent > 0.8 && edge.greenComponent < 0.5)
         #expect(try #require(bitmap.colorAt(x: 2, y: 2)).redComponent < 0.1)
     }
+
+    @Test("text is drawn in its colour starting at its point")
+    func drawsText() throws {
+        let mark = Mark(tool: .text, points: [CGPoint(x: 4, y: 20)], color: .white, weight: .thick, text: "W")
+
+        let rendered = try #require(MarkRenderer.render(try blackShot(), marks: [mark]))
+        let bitmap = NSBitmapImageRep(cgImage: rendered.image)
+
+        let litColumns = (0..<40).filter { column in
+            (0..<40).contains { row in (bitmap.colorAt(x: column, y: row)?.redComponent ?? 0) > 0.8 }
+        }
+        #expect(!litColumns.isEmpty)
+        #expect(litColumns.allSatisfy { $0 >= 3 })
+    }
+
+    @Test("empty text draws nothing")
+    func emptyTextDrawsNothing() throws {
+        let mark = Mark(tool: .text, points: [CGPoint(x: 4, y: 20)], color: .white, text: "")
+        let rendered = try #require(MarkRenderer.render(try blackShot(), marks: [mark]))
+        let bitmap = NSBitmapImageRep(cgImage: rendered.image)
+        #expect((0..<40).allSatisfy { column in (bitmap.colorAt(x: column, y: 20)?.redComponent ?? 0) < 0.1 })
+    }
 }

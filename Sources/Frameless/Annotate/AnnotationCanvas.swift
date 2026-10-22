@@ -1,7 +1,7 @@
 import AppKit
 
 /// The frozen capture with its marks, laid over the selection; dragging with a tool picked draws a mark (a click
-/// places a step), and
+/// places a step or starts typing), and
 /// holding Shift keeps rectangles, highlights and pixelated areas square and lines and arrows at 45° steps.
 final class AnnotationCanvas: NSView {
     let shot: CapturedImage
@@ -11,6 +11,9 @@ final class AnnotationCanvas: NSView {
     private(set) var history = MarkHistory() {
         didSet { needsDisplay = true }
     }
+    /// The field a text mark is being typed into, and where it was clicked.
+    var textField: NSTextField?
+    var textPoint = CGPoint.zero
     /// The mark being dragged out, shown live and added on release.
     private var draft: Mark? {
         didSet { needsDisplay = true }
@@ -56,6 +59,10 @@ final class AnnotationCanvas: NSView {
         let point = location(of: event)
         if tool == .steps {
             return add(Mark(tool: tool, points: [point], color: color, weight: weight))
+        }
+        if tool == .text {
+            commitText()
+            return beginText(at: point)
         }
         draft = Mark(
             tool: tool, points: tool == .freehand ? [point] : [point, point], color: color, weight: weight)

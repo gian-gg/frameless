@@ -135,6 +135,7 @@ final class SelectionEditorView: NSView {
     }
 
     private func choose(_ action: SelectionEditor.Action) {
+        canvas?.commitText()
         onFinish?(SelectionEditor.Choice(action: action, selection: finalSelection, image: canvas?.result))
     }
 
@@ -248,8 +249,8 @@ final class SelectionEditorView: NSView {
         case (kVK_ANSI_C, .command): choose(.copy)
         case (kVK_ANSI_S, .command): choose(.save)
         case (kVK_ANSI_P, .command): choose(.pin)
-        case (kVK_ANSI_Z, .command): canvas?.undo()
-        case (kVK_ANSI_Z, [.command, .shift]): canvas?.redo()
+        case (kVK_ANSI_Z, .command) where canvas?.isEditingText != true: canvas?.undo()
+        case (kVK_ANSI_Z, [.command, .shift]) where canvas?.isEditingText != true: canvas?.redo()
         default: return super.performKeyEquivalent(with: event)
         }
         return true
