@@ -16,8 +16,8 @@ final class SelectionEditorView: NSView {
     private let sizeTag = GlassTag()
     private var drag: Drag?
     private var tool: AnnotationTool?
-    /// The capture taken when a tool is first picked; drawn in place of the live screen from then on.
-    private var frozen: CapturedImage?
+    /// The capture taken when a tool is first picked, shown in place of the live screen from then on.
+    private var canvas: AnnotationCanvas?
     private var isFreezing = false
 
     /// A resize or move in progress: what was grabbed, and where the pointer and selection started.
@@ -58,7 +58,7 @@ final class SelectionEditorView: NSView {
 
     /// Areas and displays can be resized and moved until the capture is frozen.
     private var isResizable: Bool {
-        !isWindow && frozen == nil && !isFreezing
+        !isWindow && canvas == nil && !isFreezing
     }
 
     private static func localRect(for selection: CaptureSelection) -> CGRect {
@@ -109,7 +109,7 @@ final class SelectionEditorView: NSView {
     }
 
     private func choose(_ action: SelectionEditor.Action) {
-        onFinish?(SelectionEditor.Choice(action: action, selection: finalSelection))
+        onFinish?(SelectionEditor.Choice(action: action, selection: finalSelection, image: canvas?.result))
     }
 
     private func updateTag() {
@@ -136,7 +136,6 @@ final class SelectionEditorView: NSView {
         bounds.fill()
         NSColor.clear.setFill()
         rect.fill(using: .copy)
-        if let frozen { NSGraphicsContext.current?.cgContext.draw(frozen.image, in: rect) }
         Panel.drawSelectionFrame(rect)
     }
 
@@ -211,13 +210,14 @@ final class SelectionEditorView: NSView {
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard purpose == .screenshot, event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command else {
-            return super.performKeyEquivalent(with: event)
-        }
-        switch Int(event.keyCode) {
-        case kVK_ANSI_C: choose(.copy)
-        case kVK_ANSI_S: choose(.save)
-        case kVK_ANSI_P: choose(.pin)
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard purpose == .screenshot else { return super.performKeyEquivalent(with: event) }
+        switch (Int(event.keyCode), modifiers) {
+        case (kVK_ANSI_C, .command): choose(.copy)
+        case (kVK_ANSI_S, .command): choose(.save)
+        case (kVK_ANSI_P, .command): choose(.pin)
+        case (kVK_ANSI_Z, .command): canvas?.undo()
+        case (kVK_ANSI_Z, [.command, .shift]): canvas?.redo()
         default: return super.performKeyEquivalent(with: event)
         }
         return true
@@ -234,6 +234,12 @@ extension SelectionEditorView {
         }
     }
 
+    private func showCanvas(for shot: CapturedImage) {
+        let canvas = AnnotationCanvas(shot: shot, frame: rect)
+        addSubview(canvas, positioned: .below, relativeTo: toolbar)
+        self.canvas = canvas
+    }
+
     /// The tool a bare key press picks, for screenshots only.
     private func tool(for event: NSEvent) -> AnnotationTool? {
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting(.capsLock)
@@ -248,15 +254,15 @@ extension SelectionEditorView {
         if tool != nil { freeze() }
     }
 
-    /// Captures the selection once and shows it in place of the live screen.
+    /// Captures the selection once and lays the canvas over it in place of the live screen.
     private func freeze() {
-        guard frozen == nil, !isFreezing else { return }
+        guard canvas == nil, !isFreezing else { return }
         isFreezing = true
         let selection = finalSelection
         Task { [weak self] in
             do {
                 let shot = try await Screenshotter.captureImage(selection)
-                self?.frozen = shot
+                self?.showCanvas(for: shot)
             } catch {
                 NSSound.beep()
                 self?.pick(nil)

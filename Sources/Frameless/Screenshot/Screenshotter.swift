@@ -41,6 +41,12 @@ enum Screenshotter {
         return CapturedImage(image: image, scale: CGFloat(filter.pointPixelScale), displayID: selection.displayID)
     }
 
+    /// The editor's annotated capture when there is one, otherwise a fresh capture of the chosen selection.
+    static func image(for choice: SelectionEditor.Choice) async throws -> CapturedImage {
+        if let image = choice.image { return image }
+        return try await captureImage(choice.selection)
+    }
+
     /// Writes the capture as a timestamped PNG into the folder.
     static func save(_ shot: CapturedImage, in folder: URL) throws -> URL {
         let name = OutputFile.name(for: .now, fileExtension: Config.Output.screenshotExtension)

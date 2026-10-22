@@ -324,7 +324,7 @@ extension AppDelegate {
                 return
             }
             do {
-                let shot = try await Screenshotter.captureImage(choice.selection)
+                let shot = try await Screenshotter.image(for: choice)
                 switch choice.action {
                 case .copy:
                     Screenshotter.copy(shot)

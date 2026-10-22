@@ -11,10 +11,11 @@ final class SelectionEditor {
         case record
     }
 
-    /// The chosen action and the selection as it was when it was chosen.
+    /// The chosen action and the selection as it was when it was chosen; `image` is the annotated capture, if any.
     struct Choice {
         let action: Action
         let selection: CaptureSelection
+        var image: CapturedImage?
     }
 
     private var window: ScreenCoverWindow?
