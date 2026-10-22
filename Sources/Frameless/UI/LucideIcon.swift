@@ -11,9 +11,9 @@ import AppKit
 enum LucideIcon: CaseIterable {
     case square
     case slash
-    case arrowUpRight
+    case moveUpRight
     case pencil
-    case highlighter
+    case squareTinted
     case grid2x2
     case listOrdered
     case type
@@ -61,16 +61,15 @@ enum LucideIcon: CaseIterable {
     private static let shapes: [LucideIcon: [String]] = [
         .square: [#"<rect width="18" height="18" x="3" y="3" rx="2"/>"#],
         .slash: [#"<path d="M22 2 2 22"/>"#],
-        .arrowUpRight: [#"<path d="M7 7h10v10"/>"#, #"<path d="M7 17 17 7"/>"#],
+        // move-up-right
+        .moveUpRight: [#"<path d="M13 5H19V11"/>"#, #"<path d="M19 5L5 19"/>"#],
         .pencil: [
             #"<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83"#
                 + #"l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>"#,
             #"<path d="m15 5 4 4"/>"#,
         ],
-        .highlighter: [
-            #"<path d="m9 11-6 6v3h9l3-3"/>"#,
-            #"<path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>"#,
-        ],
+        // square, with a translucent fill
+        .squareTinted: [##"<rect width="18" height="18" x="3" y="3" rx="2" fill="#000" fill-opacity="0.35"/>"##],
         .grid2x2: [
             #"<rect width="18" height="18" x="3" y="3" rx="2"/>"#, #"<path d="M3 12h18"/>"#, #"<path d="M12 3v18"/>"#,
         ],

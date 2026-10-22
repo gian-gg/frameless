@@ -26,9 +26,9 @@ enum AnnotationTool: CaseIterable {
         switch self {
         case .rectangle: .square
         case .line: .slash
-        case .arrow: .arrowUpRight
+        case .arrow: .moveUpRight
         case .freehand: .pencil
-        case .highlight: .highlighter
+        case .highlight: .squareTinted
         case .pixelate: .grid2x2
         case .steps: .listOrdered
         case .text: .type

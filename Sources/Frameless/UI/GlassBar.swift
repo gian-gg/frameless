@@ -9,10 +9,10 @@ final class GlassBar: NSView {
         let toolTip: String
     }
 
-    /// A clickable item, with a key cap when it has a shortcut to show.
+    /// A clickable item: an icon, then an optional label and key cap.
     struct Item {
         let icon: LucideIcon
-        let title: String
+        let title: String?
         let shortcut: BarButton.Shortcut?
         let toolTip: String
         let perform: @MainActor () -> Void

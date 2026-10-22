@@ -90,13 +90,13 @@ final class SelectionEditorView: NSView {
         case .screenshot:
             [
                 .init(
-                    icon: .copy, title: "Copy", shortcut: nil, toolTip: "Copy to the clipboard (⌘C)",
+                    icon: .copy, title: nil, shortcut: nil, toolTip: "Copy to the clipboard (⌘C)",
                     perform: { [weak self] in self?.choose(.copy) }),
                 .init(
-                    icon: .download, title: "Save", shortcut: nil, toolTip: "Save (⌘S)",
+                    icon: .download, title: nil, shortcut: nil, toolTip: "Save (⌘S)",
                     perform: { [weak self] in self?.choose(.save) }),
                 .init(
-                    icon: .pin, title: "Pin", shortcut: nil, toolTip: "Pin on screen (⌘P)",
+                    icon: .pin, title: nil, shortcut: nil, toolTip: "Pin on screen (⌘P)",
                     perform: { [weak self] in self?.choose(.pin) }),
             ]
         case .recording:
