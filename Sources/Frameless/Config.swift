@@ -144,6 +144,9 @@ enum Config {
         /// The glass lens behind a selected button: its tint and how long it takes to slide.
         static let lensTintOpacity: CGFloat = 0.12
         static let lensDuration: TimeInterval = 0.25
+        /// The fainter lens under the hovered button, and how long it lingers after the pointer leaves.
+        static let hoverLensTintOpacity: CGFloat = 0.06
+        static let hoverLensGrace: TimeInterval = 0.06
         /// Gap between a style button and its row of choices above it.
         static let styleRowGap: CGFloat = 8
         /// Tool icons are dimmed to this until selected; the selected one sits on this brighter pill.

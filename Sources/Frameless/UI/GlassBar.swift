@@ -72,6 +72,9 @@ final class GlassBar: NSView {
         addSubview(circle)
 
         setFrameSize(CGSize(width: circle.frame.maxX, height: height))
+        for case let panel as GlassPanel in subviews {
+            GlassLens.followHover(in: panel.content)
+        }
     }
 
     @available(*, unavailable)

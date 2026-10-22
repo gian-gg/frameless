@@ -28,6 +28,7 @@ final class SampleRow: GlassPanel {
             left += Config.Bar.toolWidth
         }
         setFrameSize(CGSize(width: left + Config.Bar.padding, height: side + Config.Bar.padding * 2))
+        GlassLens.followHover(in: content)
     }
 
     @available(*, unavailable)

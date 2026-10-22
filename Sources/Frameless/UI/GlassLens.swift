@@ -1,11 +1,38 @@
 import AppKit
 
-/// A small glass capsule behind the selected button in a row, sliding from button to button; macOS 26 and later.
+/// A small glass capsule behind a row's selected or hovered button, sliding from button to button; macOS 26 and
+/// later.
 final class GlassLens: NSView {
+    private var hideTask: Task<Void, Never>?
+
     /// A hidden lens, or nil before macOS 26.
-    static func make() -> GlassLens? {
+    static func make(tint: CGFloat = Config.Bar.lensTintOpacity) -> GlassLens? {
         guard #available(macOS 26, *) else { return nil }
-        return GlassLens(tint: Config.Bar.lensTintOpacity)
+        return GlassLens(tint: tint)
+    }
+
+    /// Puts a fainter lens behind the bar buttons in `container` that follows the pointer between them.
+    static func followHover(in container: NSView) {
+        let buttons = container.subviews.compactMap { $0 as? BarButton }
+        guard !buttons.isEmpty, let lens = make(tint: Config.Bar.hoverLensTintOpacity) else { return }
+        container.addSubview(lens, positioned: .below, relativeTo: nil)
+        for button in buttons {
+            button.drawsHover = false
+            button.onHover = { [weak lens, weak button] isInside in
+                lens?.follow(isInside ? button?.frame : nil)
+            }
+        }
+    }
+
+    /// Moves to the hovered button; leaving waits a moment so moving to a neighbour slides rather than blinks.
+    func follow(_ target: CGRect?) {
+        hideTask?.cancel()
+        guard target == nil else { return move(to: target) }
+        hideTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Config.Bar.hoverLensGrace))
+            guard !Task.isCancelled else { return }
+            self?.move(to: nil)
+        }
     }
 
     @available(macOS 26, *)

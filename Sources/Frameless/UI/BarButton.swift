@@ -56,10 +56,15 @@ final class BarButton: NSControl {
         didSet { needsDisplay = true }
     }
 
-    /// Draws its own pill when selected; off where a glass lens shows the selection instead.
+    /// Draws its own pill when selected or hovered; off where a glass lens shows them instead.
     var drawsSelection = true {
         didSet { needsDisplay = true }
     }
+    var drawsHover = true {
+        didSet { needsDisplay = true }
+    }
+    /// Called as the pointer enters and leaves.
+    var onHover: (@MainActor (Bool) -> Void)?
 
     /// Shown with a brighter pill and a full-strength icon, for the active tool.
     var isSelected = false {
@@ -160,7 +165,7 @@ final class BarButton: NSControl {
 
     override func draw(_ dirtyRect: NSRect) {
         let showsSelection = isSelected && drawsSelection
-        if isInteractive, isPressed || showsSelection || isHovering {
+        if isInteractive, isPressed || showsSelection || (isHovering && drawsHover) {
             let opacity = showsSelection ? Config.Bar.selectedFillOpacity : isPressed ? 0.22 : 0.1
             NSColor.labelColor.withAlphaComponent(opacity).setFill()
             let radius = min(bounds.width, bounds.height) / 2
@@ -201,11 +206,13 @@ final class BarButton: NSControl {
 
     override func mouseEntered(with event: NSEvent) {
         isHovering = true
+        onHover?(true)
         if let tipText { tip.schedule(tipText, for: self) }
     }
 
     override func mouseExited(with event: NSEvent) {
         isHovering = false
+        onHover?(false)
         tip.hide()
     }
 
