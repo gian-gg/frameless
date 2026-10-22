@@ -12,6 +12,7 @@ final class Preferences {
         static let resolution = "resolution"
         static let playsSounds = "playsSounds"
         static func shortcut(_ action: Hotkeys.Action) -> String { "shortcut.\(action)" }
+        static func saveFolder(_ purpose: CapturePurpose) -> String { "saveFolder.\(purpose)" }
     }
 
     private let defaults: UserDefaults
@@ -82,6 +83,15 @@ final class Preferences {
 
     func setShortcut(_ shortcut: Shortcut?, for action: Hotkeys.Action) {
         defaults.set(try? JSONEncoder().encode(shortcut), forKey: Key.shortcut(action))
+    }
+
+    /// The folder chosen for screenshots or recordings; nil for the default.
+    func saveFolder(for purpose: CapturePurpose) -> URL? {
+        defaults.string(forKey: Key.saveFolder(purpose)).map { URL(filePath: $0, directoryHint: .isDirectory) }
+    }
+
+    func setSaveFolder(_ folder: URL?, for purpose: CapturePurpose) {
+        defaults.set(folder?.path(percentEncoded: false), forKey: Key.saveFolder(purpose))
     }
 
     var recordingOptions: RecordingOptions {

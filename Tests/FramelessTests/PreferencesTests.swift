@@ -75,4 +75,21 @@ struct PreferencesTests {
         #expect(reloaded.shortcut(for: .screenshot) == custom)
         #expect(reloaded.shortcut(for: .record) == nil)
     }
+
+    @Test("save folders are unset by default, persist once chosen, and clear back to unset")
+    func storesSaveFolders() throws {
+        let defaults = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let preferences = Preferences(defaults: defaults)
+        #expect(preferences.saveFolder(for: .screenshot) == nil)
+
+        let folder = URL(filePath: "/Users/someone/Desktop/Shots", directoryHint: .isDirectory)
+        preferences.setSaveFolder(folder, for: .screenshot)
+        #expect(Preferences(defaults: defaults).saveFolder(for: .screenshot) == folder)
+        #expect(Preferences(defaults: defaults).saveFolder(for: .recording) == nil)
+
+        preferences.setSaveFolder(nil, for: .screenshot)
+        #expect(Preferences(defaults: defaults).saveFolder(for: .screenshot) == nil)
+    }
 }
