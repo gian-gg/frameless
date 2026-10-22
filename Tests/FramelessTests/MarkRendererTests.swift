@@ -87,4 +87,23 @@ struct MarkRendererTests {
         #expect(lowerArm.redComponent > 0.5)
         #expect(behindStart.redComponent < 0.1)
     }
+
+    @Test("a freehand stroke is drawn through its points")
+    func drawsFreehand() throws {
+        let points = stride(from: 5, through: 35, by: 3).map { CGPoint(x: CGFloat($0), y: 20) }
+        let mark = Mark(tool: .freehand, points: points, color: Config.Annotate.color)
+
+        let rendered = try #require(MarkRenderer.render(try blackShot(), marks: [mark]))
+        let bitmap = NSBitmapImageRep(cgImage: rendered.image)
+
+        #expect(try #require(bitmap.colorAt(x: 20, y: 20)).redComponent > 0.8)
+        #expect(try #require(bitmap.colorAt(x: 20, y: 5)).redComponent < 0.1)
+    }
+
+    @Test("a mark's bounds cover all its points, so a closed loop isn't mistaken for a click")
+    func boundsCoverAllPoints() {
+        let loop = [CGPoint(x: 10, y: 10), CGPoint(x: 30, y: 12), CGPoint(x: 20, y: 30), CGPoint(x: 10, y: 10)]
+        let mark = Mark(tool: .freehand, points: loop, color: Config.Annotate.color)
+        #expect(MarkRenderer.bounds(of: mark) == CGRect(x: 10, y: 10, width: 20, height: 20))
+    }
 }

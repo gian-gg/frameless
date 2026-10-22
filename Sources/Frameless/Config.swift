@@ -70,6 +70,8 @@ enum Config {
         static let arrowHeadAngle: CGFloat = .pi / 6
         /// Drags shorter than this, in points, are clicks and leave no mark.
         static let minimumDrag: CGFloat = 3
+        /// The least distance between recorded points of a freehand stroke.
+        static let freehandSpacing: CGFloat = 2
     }
 
     /// Screenshots pinned on screen.

@@ -47,15 +47,17 @@ enum MarkRenderer {
             drawLine(mark, in: context)
         case .arrow:
             drawArrow(mark, in: context)
-        case .freehand, .highlight, .pixelate, .steps, .text:
+        case .freehand:
+            drawFreehand(mark, in: context)
+        case .highlight, .pixelate, .steps, .text:
             break
         }
     }
 
-    /// The rectangle spanned by a mark's first and last points.
+    /// The smallest rectangle around all of a mark's points.
     static func bounds(of mark: Mark) -> CGRect? {
-        guard let first = mark.points.first, let last = mark.points.last else { return nil }
-        return CGRect(x: first.x, y: first.y, width: last.x - first.x, height: last.y - first.y).standardized
+        guard let first = mark.points.first else { return nil }
+        return mark.points.reduce(CGRect(origin: first, size: .zero)) { $0.union(CGRect(origin: $1, size: .zero)) }
     }
 
     private static func drawLine(_ mark: Mark, in context: CGContext) {
@@ -80,6 +82,18 @@ enum MarkRenderer {
             context.move(to: end)
             context.addLine(to: CGPoint(x: end.x + cos(armAngle) * headLength, y: end.y + sin(armAngle) * headLength))
         }
+        context.strokePath()
+    }
+
+    /// A smooth curve through the stroke: each point bends the path towards it on the way to the next midpoint.
+    private static func drawFreehand(_ mark: Mark, in context: CGContext) {
+        guard let first = mark.points.first, let last = mark.points.last else { return }
+        context.move(to: first)
+        for (previous, point) in zip(mark.points, mark.points.dropFirst()) {
+            let middle = CGPoint(x: (previous.x + point.x) / 2, y: (previous.y + point.y) / 2)
+            context.addQuadCurve(to: middle, control: previous)
+        }
+        context.addLine(to: last)
         context.strokePath()
     }
 

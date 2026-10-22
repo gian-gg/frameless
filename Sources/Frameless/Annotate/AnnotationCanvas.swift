@@ -51,12 +51,18 @@ final class AnnotationCanvas: NSView {
     override func mouseDown(with event: NSEvent) {
         guard let tool else { return }
         let point = location(of: event)
-        draft = Mark(tool: tool, points: [point, point], color: Config.Annotate.color)
+        draft = Mark(tool: tool, points: tool == .freehand ? [point] : [point, point], color: Config.Annotate.color)
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard var mark = draft, let start = mark.points.first else { return }
+        guard var mark = draft, let start = mark.points.first, let last = mark.points.last else { return }
         var point = location(of: event)
+        if mark.tool == .freehand {
+            guard hypot(point.x - last.x, point.y - last.y) >= Config.Annotate.freehandSpacing else { return }
+            mark.points.append(point)
+            draft = mark
+            return
+        }
         if event.modifierFlags.contains(.shift) {
             switch mark.tool {
             case .rectangle: point = ScreenGeometry.squareCorner(from: start, to: point, in: bounds)
