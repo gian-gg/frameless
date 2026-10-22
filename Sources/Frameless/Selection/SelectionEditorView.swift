@@ -155,7 +155,11 @@ final class SelectionEditorView: NSView {
     }
 
     override func mouseMoved(with event: NSEvent) {
-        Self.cursor(for: handle(at: event)).set()
+        if let canvas, canvas.tool != nil, canvas.frame.contains(convert(event.locationInWindow, from: nil)) {
+            NSCursor.crosshair.set()
+        } else {
+            Self.cursor(for: handle(at: event)).set()
+        }
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -236,6 +240,7 @@ extension SelectionEditorView {
 
     private func showCanvas(for shot: CapturedImage) {
         let canvas = AnnotationCanvas(shot: shot, frame: rect)
+        canvas.tool = tool
         addSubview(canvas, positioned: .below, relativeTo: toolbar)
         self.canvas = canvas
     }
@@ -251,6 +256,7 @@ extension SelectionEditorView {
     private func pick(_ tool: AnnotationTool?) {
         self.tool = tool
         toolbar?.selectTool(tool.flatMap { AnnotationTool.allCases.firstIndex(of: $0) })
+        canvas?.tool = tool
         if tool != nil { freeze() }
     }
 

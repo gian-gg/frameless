@@ -1,9 +1,14 @@
 import AppKit
 
-/// The frozen capture with its marks, laid over the selection; the editor's tools draw into it.
+/// The frozen capture with its marks, laid over the selection; dragging with a tool picked draws a mark.
 final class AnnotationCanvas: NSView {
     let shot: CapturedImage
+    var tool: AnnotationTool?
     private(set) var history = MarkHistory() {
+        didSet { needsDisplay = true }
+    }
+    /// The mark being dragged out, shown live and added on release.
+    private var draft: Mark? {
         didSet { needsDisplay = true }
     }
 
@@ -35,6 +40,37 @@ final class AnnotationCanvas: NSView {
     override func draw(_ dirtyRect: NSRect) {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         context.draw(shot.image, in: bounds)
-        MarkRenderer.draw(history.marks, in: context, over: shot.image, size: bounds.size)
+        MarkRenderer.draw(history.marks + [draft].compactMap { $0 }, in: context, over: shot.image, size: bounds.size)
+    }
+
+    // MARK: - Drawing marks
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let tool else { return }
+        let point = location(of: event)
+        draft = Mark(tool: tool, points: [point, point], color: Config.Annotate.color)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard var mark = draft else { return }
+        mark.points[mark.points.count - 1] = location(of: event)
+        draft = mark
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard let mark = draft else { return }
+        draft = nil
+        guard let rect = MarkRenderer.bounds(of: mark),
+            max(rect.width, rect.height) >= Config.Annotate.minimumDrag
+        else { return }
+        add(mark)
+    }
+
+    /// Where the pointer is, in canvas points, kept inside the canvas.
+    private func location(of event: NSEvent) -> CGPoint {
+        let point = convert(event.locationInWindow, from: nil)
+        return CGPoint(x: min(max(point.x, 0), bounds.width), y: min(max(point.y, 0), bounds.height))
     }
 }

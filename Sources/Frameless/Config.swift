@@ -56,6 +56,18 @@ enum Config {
         static let thumbnailFadeDuration: TimeInterval = 0.2
     }
 
+    /// Marks drawn on a frozen screenshot.
+    enum Annotate {
+        static let color = CGColor(gray: 1, alpha: 1)
+        /// A soft dark halo behind each mark so light marks stay visible on light screenshots.
+        static let shadowBlur: CGFloat = 2
+        static let shadowOpacity: CGFloat = 0.5
+        static let lineWidth: CGFloat = 3
+        static let cornerRadius: CGFloat = 3
+        /// Drags shorter than this, in points, are clicks and leave no mark.
+        static let minimumDrag: CGFloat = 3
+    }
+
     /// Screenshots pinned on screen.
     enum Pin {
         static let cornerRadius: CGFloat = 6

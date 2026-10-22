@@ -1,4 +1,4 @@
-import CoreGraphics
+import AppKit
 import Testing
 
 @testable import Frameless
@@ -28,5 +28,26 @@ struct MarkRendererTests {
         #expect(rendered.image.height == 6)
         #expect(rendered.scale == 2)
         #expect(rendered.displayID == 3)
+    }
+
+    @Test("a rectangle is stroked along its edges and leaves its middle dark")
+    func drawsRectangle() throws {
+        let context = try #require(
+            CGContext(
+                data: nil, width: 40, height: 40, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.setFillColor(gray: 0, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
+        let shot = CapturedImage(image: try #require(context.makeImage()), scale: 1, displayID: 1)
+        let mark = Mark(
+            tool: .rectangle, points: [CGPoint(x: 10, y: 10), CGPoint(x: 30, y: 30)], color: Config.Annotate.color)
+
+        let rendered = try #require(MarkRenderer.render(shot, marks: [mark]))
+        let bitmap = NSBitmapImageRep(cgImage: rendered.image)
+
+        let edge = try #require(bitmap.colorAt(x: 20, y: 10))
+        let middle = try #require(bitmap.colorAt(x: 20, y: 20))
+        #expect(edge.redComponent > 0.8 && edge.blueComponent > 0.8)
+        #expect(middle.redComponent < 0.1)
     }
 }

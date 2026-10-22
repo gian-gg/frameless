@@ -30,9 +30,34 @@ enum MarkRenderer {
 
     /// Each tool draws its marks here.
     private static func draw(_ mark: Mark, in context: CGContext, over image: CGImage, size: CGSize) {
+        context.saveGState()
+        defer { context.restoreGState() }
+        context.setStrokeColor(mark.color)
+        context.setLineWidth(Config.Annotate.lineWidth)
+        context.setLineJoin(.round)
+        context.setLineCap(.round)
+        let pixelsPerPoint = abs(context.ctm.a)
+        context.setShadow(
+            offset: .zero, blur: Config.Annotate.shadowBlur * pixelsPerPoint,
+            color: CGColor(gray: 0, alpha: Config.Annotate.shadowOpacity))
         switch mark.tool {
-        case .rectangle, .line, .arrow, .freehand, .highlight, .pixelate, .steps, .text:
+        case .rectangle:
+            drawRectangle(mark, in: context)
+        case .line, .arrow, .freehand, .highlight, .pixelate, .steps, .text:
             break
         }
+    }
+
+    /// The rectangle spanned by a mark's first and last points.
+    static func bounds(of mark: Mark) -> CGRect? {
+        guard let first = mark.points.first, let last = mark.points.last else { return nil }
+        return CGRect(x: first.x, y: first.y, width: last.x - first.x, height: last.y - first.y).standardized
+    }
+
+    private static func drawRectangle(_ mark: Mark, in context: CGContext) {
+        guard let rect = bounds(of: mark) else { return }
+        let radius = min(Config.Annotate.cornerRadius, rect.width / 2, rect.height / 2)
+        context.addPath(CGPath(roundedRect: rect, cornerWidth: radius, cornerHeight: radius, transform: nil))
+        context.strokePath()
     }
 }
