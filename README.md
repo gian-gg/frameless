@@ -2,35 +2,54 @@
 
 # Frameless
 
-A lightweight screenshot and screen recording tool for macOS that lives in the menu bar.
+Screenshots, annotations and screen recordings for macOS, built light and native.
 
-Pick a display, an area or a window, adjust the selection, then copy, save or record. Capture and encoding are done by macOS
-itself, so Frameless stays idle while you record. Requires macOS 15 or later.
+Pick a display, an area or a window, mark it up, then copy, save, pin or record it.
+
+Capture and encoding are done by macOS itself, and Frameless uses no CPU while idle. Start from the menu bar or a
+shortcut. Requires macOS 15 or later.
 
 ## Features
 
-**Screenshots**
+### Capture
 
-- Capture a whole display, a dragged area, or a single window
-- Resize or move the selection before capturing, with a live pixel-size tag
-- Copy to the clipboard or save as PNG
-- Window shots come out at the window's exact size, without the shadow padding
-- Retina-aware: full pixel resolution, opening at its on-screen size
+- **Anything on screen:** a whole display, a dragged area, or a single window
+- **Adjustable:** resize or move the selection first, with a live pixel-size tag
+- **Exact windows:** captured at the window's own size, without the shadow padding
+- **Retina-aware:** full pixel resolution, opening at its on-screen size
+- **Your choice of output:** copy, save as PNG, or pin on screen
 
-**Recording**
+### Annotate
 
-- Record a display, an area or a single window, adjusting the selection first
-- System audio and microphone
-- H.264 or HEVC, Original / 1440p / 1080p / 720p, 30 or 60 fps
-- The menu bar icon turns red while recording; click it to stop and save or discard
-- A recording that macOS ends on its own (window closed, display unplugged) is still saved
+- **Shapes:** rectangle, line, arrow and freehand; hold <kbd>⇧</kbd> for squares and 45° lines
+- **Highlight:** keeps an area bright and darkens the rest
+- **Pixelate:** hides an area for good, rebuilt from the image's own pixels
+- **Steps:** numbered markers that count up as you place them
+- **Text:** typed in place
+- **Style:** six colours and three thicknesses, remembered between screenshots
+- **Edit:** select a mark to move, restyle or delete it; undo and redo everything
+- **Keyboard-friendly:** every tool has a one-key shortcut, shown in its tooltip
 
-**Everywhere**
+### Pin
 
-- Customisable global shortcuts: <kbd>⇧⌘2</kbd> for a screenshot and <kbd>⇧⌘6</kbd> to start or stop a recording by default
-- macOS capture sounds and a floating thumbnail after each capture: click to open, drag to share
-- Liquid Glass interface on macOS 26, frosted glass on earlier versions
-- No windows, no Dock icon: everything is in the menu bar
+- **Float it:** keep a screenshot above your windows while you work
+- **Move and resize:** drag it anywhere, scroll to zoom, <kbd>⌥</kbd>-scroll to fade
+- **Right-click:** copy, save, zoom, fade or close; close all pins from the menu
+
+### Record
+
+- **Anything on screen:** a display, an area or a single window
+- **Audio:** system sound and microphone
+- **Quality:** H.264 or HEVC, Original / 1440p / 1080p / 720p, 30 or 60 fps
+- **Stop from the menu bar:** the icon turns red while recording; click it to save or discard
+- **Never lost:** a recording macOS ends on its own (window closed, display unplugged) is still saved
+
+### Everywhere
+
+- **Shortcuts:** <kbd>⇧⌘2</kbd> for a screenshot and <kbd>⇧⌘6</kbd> to record, changeable in Preferences
+- **Save folders:** choose where screenshots and recordings go
+- **Feedback:** macOS capture sounds and a floating thumbnail; click to open, drag to share
+- **Liquid Glass:** on macOS 26, with frosted glass on earlier versions
 
 ## License
 
