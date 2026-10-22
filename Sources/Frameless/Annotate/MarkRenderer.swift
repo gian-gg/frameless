@@ -45,7 +45,9 @@ enum MarkRenderer {
             drawRectangle(mark, in: context)
         case .line:
             drawLine(mark, in: context)
-        case .arrow, .freehand, .highlight, .pixelate, .steps, .text:
+        case .arrow:
+            drawArrow(mark, in: context)
+        case .freehand, .highlight, .pixelate, .steps, .text:
             break
         }
     }
@@ -60,6 +62,24 @@ enum MarkRenderer {
         guard let first = mark.points.first, let last = mark.points.last else { return }
         context.move(to: first)
         context.addLine(to: last)
+        context.strokePath()
+    }
+
+    /// A line with an open head of two arms at its end, stroked as one path so they share a halo.
+    private static func drawArrow(_ mark: Mark, in context: CGContext) {
+        guard let start = mark.points.first, let end = mark.points.last else { return }
+        let length = hypot(end.x - start.x, end.y - start.y)
+        guard length > 0 else { return }
+        let headLength = min(
+            Config.Annotate.lineWidth * Config.Annotate.arrowHeadWidths, length * Config.Annotate.arrowHeadShare)
+        let angle = atan2(end.y - start.y, end.x - start.x)
+        context.move(to: start)
+        context.addLine(to: end)
+        for side: CGFloat in [-1, 1] {
+            let armAngle = angle + .pi + side * Config.Annotate.arrowHeadAngle
+            context.move(to: end)
+            context.addLine(to: CGPoint(x: end.x + cos(armAngle) * headLength, y: end.y + sin(armAngle) * headLength))
+        }
         context.strokePath()
     }
 

@@ -69,4 +69,22 @@ struct MarkRendererTests {
         #expect(onLine.redComponent > 0.8)
         #expect(offLine.redComponent < 0.1)
     }
+
+    @Test("an arrow draws its line and two arms back from its end")
+    func drawsArrow() throws {
+        let mark = Mark(
+            tool: .arrow, points: [CGPoint(x: 5, y: 20), CGPoint(x: 35, y: 20)], color: Config.Annotate.color)
+
+        let rendered = try #require(MarkRenderer.render(try blackShot(), marks: [mark]))
+        let bitmap = NSBitmapImageRep(cgImage: rendered.image)
+
+        let line = try #require(bitmap.colorAt(x: 15, y: 20))
+        let upperArm = try #require(bitmap.colorAt(x: 30, y: 17))
+        let lowerArm = try #require(bitmap.colorAt(x: 30, y: 23))
+        let behindStart = try #require(bitmap.colorAt(x: 10, y: 26))
+        #expect(line.redComponent > 0.8)
+        #expect(upperArm.redComponent > 0.5)
+        #expect(lowerArm.redComponent > 0.5)
+        #expect(behindStart.redComponent < 0.1)
+    }
 }

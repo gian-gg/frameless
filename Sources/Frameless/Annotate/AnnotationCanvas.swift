@@ -1,7 +1,7 @@
 import AppKit
 
 /// The frozen capture with its marks, laid over the selection; dragging with a tool picked draws a mark, and
-/// holding Shift keeps rectangles square and lines at 45° steps.
+/// holding Shift keeps rectangles square and lines and arrows at 45° steps.
 final class AnnotationCanvas: NSView {
     let shot: CapturedImage
     var tool: AnnotationTool?
@@ -60,7 +60,7 @@ final class AnnotationCanvas: NSView {
         if event.modifierFlags.contains(.shift) {
             switch mark.tool {
             case .rectangle: point = ScreenGeometry.squareCorner(from: start, to: point, in: bounds)
-            case .line: point = ScreenGeometry.snappedEnd(from: start, to: point, in: bounds)
+            case .line, .arrow: point = ScreenGeometry.snappedEnd(from: start, to: point, in: bounds)
             default: break
             }
         }

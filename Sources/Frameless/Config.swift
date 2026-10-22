@@ -64,6 +64,10 @@ enum Config {
         static let shadowOpacity: CGFloat = 0.5
         static let lineWidth: CGFloat = 3
         static let cornerRadius: CGFloat = 3
+        /// An arrowhead's arms: this many line widths long, at most this share of the arrow, at this angle.
+        static let arrowHeadWidths: CGFloat = 4
+        static let arrowHeadShare: CGFloat = 0.4
+        static let arrowHeadAngle: CGFloat = .pi / 6
         /// Drags shorter than this, in points, are clicks and leave no mark.
         static let minimumDrag: CGFloat = 3
     }
