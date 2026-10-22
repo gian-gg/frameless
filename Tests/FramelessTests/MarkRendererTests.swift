@@ -106,4 +106,31 @@ struct MarkRendererTests {
         let mark = Mark(tool: .freehand, points: loop, color: .white)
         #expect(MarkRenderer.bounds(of: mark) == CGRect(x: 10, y: 10, width: 20, height: 20))
     }
+
+    /// A 40 × 40 mid-grey capture at 1×.
+    private func greyShot() throws -> CapturedImage {
+        let context = try #require(
+            CGContext(
+                data: nil, width: 40, height: 40, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.setFillColor(gray: 0.6, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
+        return CapturedImage(image: try #require(context.makeImage()), scale: 1, displayID: 1)
+    }
+
+    @Test("a highlight leaves its areas untouched, overlaps included, and darkens everything else")
+    func drawsSpotlight() throws {
+        let first = Mark(tool: .highlight, points: [CGPoint(x: 5, y: 5), CGPoint(x: 20, y: 20)], color: .white)
+        let second = Mark(tool: .highlight, points: [CGPoint(x: 15, y: 15), CGPoint(x: 30, y: 30)], color: .white)
+
+        let rendered = try #require(MarkRenderer.render(try greyShot(), marks: [first, second]))
+        let bitmap = NSBitmapImageRep(cgImage: rendered.image)
+
+        let inside = try #require(bitmap.colorAt(x: 10, y: 30)).redComponent
+        let overlap = try #require(bitmap.colorAt(x: 17, y: 22)).redComponent
+        let outside = try #require(bitmap.colorAt(x: 36, y: 4)).redComponent
+        #expect(abs(inside - 0.6) < 0.05)
+        #expect(abs(overlap - 0.6) < 0.05)
+        #expect(outside < 0.4)
+    }
 }

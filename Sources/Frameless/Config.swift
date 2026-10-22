@@ -63,6 +63,12 @@ enum Config {
         static let shadowBlur: CGFloat = 2
         static let shadowOpacity: CGFloat = 0.5
         static let defaultWeight = MarkWeight.medium
+        /// How dark the capture gets outside highlighted areas, and the light edge and soft shadow around each area.
+        static let spotlightDim: CGFloat = 0.4
+        static let spotlightEdgeWidth: CGFloat = 1
+        static let spotlightEdgeOpacity: CGFloat = 0.4
+        static let spotlightShadowBlur: CGFloat = 10
+        static let spotlightShadowOpacity: CGFloat = 0.6
         static let cornerRadius: CGFloat = 3
         /// An arrowhead's arms: this many line widths long, at most this share of the arrow, at this angle.
         static let arrowHeadWidths: CGFloat = 4

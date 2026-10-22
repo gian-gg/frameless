@@ -3,8 +3,13 @@ import CoreGraphics
 /// Draws marks, both on screen and into the exported image, so the two always match.
 enum MarkRenderer {
     /// Draws marks into a context whose units are selection points; `image` is the capture under them.
+    /// Highlights go first, as one darkened layer, so every other mark sits above it.
     static func draw(_ marks: [Mark], in context: CGContext, over image: CGImage, size: CGSize) {
-        for mark in marks {
+        let highlights = marks.filter { $0.tool == .highlight }
+        if !highlights.isEmpty {
+            drawSpotlight(highlights, in: context, size: size)
+        }
+        for mark in marks where mark.tool != .highlight {
             draw(mark, in: context, over: image, size: size)
         }
     }
@@ -83,6 +88,45 @@ enum MarkRenderer {
             context.addLine(to: CGPoint(x: end.x + cos(armAngle) * headLength, y: end.y + sin(armAngle) * headLength))
         }
         context.strokePath()
+    }
+
+    /// Darkens everything outside the highlighted areas, cutting each area out of one dark sheet so overlaps stay
+    /// bright, then lifts each area with a soft shadow and a light edge.
+    private static func drawSpotlight(_ marks: [Mark], in context: CGContext, size: CGSize) {
+        let areas = marks.compactMap(spotlightPath(for:))
+        context.saveGState()
+        defer { context.restoreGState() }
+        context.beginTransparencyLayer(auxiliaryInfo: nil)
+        context.setFillColor(CGColor(gray: 0, alpha: Config.Annotate.spotlightDim))
+        context.fill(CGRect(origin: .zero, size: size))
+        context.setShadow(
+            offset: .zero, blur: Config.Annotate.spotlightShadowBlur * abs(context.ctm.a),
+            color: CGColor(gray: 0, alpha: Config.Annotate.spotlightShadowOpacity))
+        context.setStrokeColor(CGColor(gray: 0, alpha: 1))
+        context.setLineWidth(Config.Annotate.spotlightEdgeWidth)
+        for area in areas {
+            context.addPath(area)
+            context.strokePath()
+        }
+        context.setShadow(offset: .zero, blur: 0, color: nil)
+        context.setBlendMode(.clear)
+        for area in areas {
+            context.addPath(area)
+            context.fillPath()
+        }
+        context.endTransparencyLayer()
+        context.setStrokeColor(CGColor(gray: 1, alpha: Config.Annotate.spotlightEdgeOpacity))
+        context.setLineWidth(Config.Annotate.spotlightEdgeWidth)
+        for area in areas {
+            context.addPath(area)
+            context.strokePath()
+        }
+    }
+
+    private static func spotlightPath(for mark: Mark) -> CGPath? {
+        guard let rect = bounds(of: mark) else { return nil }
+        let radius = min(Config.Annotate.cornerRadius, rect.width / 2, rect.height / 2)
+        return CGPath(roundedRect: rect, cornerWidth: radius, cornerHeight: radius, transform: nil)
     }
 
     /// A smooth curve through the stroke: each point bends the path towards it on the way to the next midpoint.
