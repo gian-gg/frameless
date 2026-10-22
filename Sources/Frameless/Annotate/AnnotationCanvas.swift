@@ -1,6 +1,7 @@
 import AppKit
 
-/// The frozen capture with its marks, laid over the selection; dragging with a tool picked draws a mark, and
+/// The frozen capture with its marks, laid over the selection; dragging with a tool picked draws a mark (a click
+/// places a step), and
 /// holding Shift keeps rectangles, highlights and pixelated areas square and lines and arrows at 45° steps.
 final class AnnotationCanvas: NSView {
     let shot: CapturedImage
@@ -53,6 +54,9 @@ final class AnnotationCanvas: NSView {
     override func mouseDown(with event: NSEvent) {
         guard let tool else { return }
         let point = location(of: event)
+        if tool == .steps {
+            return add(Mark(tool: tool, points: [point], color: color, weight: weight))
+        }
         draft = Mark(
             tool: tool, points: tool == .freehand ? [point] : [point, point], color: color, weight: weight)
     }

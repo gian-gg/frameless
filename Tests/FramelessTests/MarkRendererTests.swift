@@ -181,4 +181,25 @@ struct MarkRendererTests {
         let largeColor = try #require(fromLarge.colorAt(x: 26, y: 40)).redComponent
         #expect(abs(smallColor - largeColor) < 0.02)
     }
+
+    @Test("steps are numbered in the order placed, skipping other marks")
+    func numbersSteps() {
+        let step = { (offset: CGFloat) in Mark(tool: .steps, points: [CGPoint(x: offset, y: 0)], color: .red) }
+        let line = Mark(tool: .line, points: [.zero, CGPoint(x: 5, y: 5)], color: .red)
+        let numbered = MarkRenderer.numberedSteps(in: [step(1), line, step(2), step(3)])
+        #expect(numbered.map(\.number) == [1, 2, 3])
+        #expect(numbered.map { $0.mark.points[0].x } == [1, 2, 3])
+    }
+
+    @Test("a step draws a filled circle in its colour around its point")
+    func drawsStep() throws {
+        let mark = Mark(tool: .steps, points: [CGPoint(x: 20, y: 20)], color: .red)
+
+        let rendered = try #require(MarkRenderer.render(try blackShot(), marks: [mark]))
+        let bitmap = NSBitmapImageRep(cgImage: rendered.image)
+
+        let edge = try #require(bitmap.colorAt(x: 29, y: 20))
+        #expect(edge.redComponent > 0.8 && edge.greenComponent < 0.5)
+        #expect(try #require(bitmap.colorAt(x: 2, y: 2)).redComponent < 0.1)
+    }
 }

@@ -22,6 +22,11 @@ enum MarkColor: String, CaseIterable {
         }
     }
 
+    /// Black on the light colours and white on the rest, for text drawn on top.
+    var contrastingText: CGColor {
+        CGColor(gray: self == .white || self == .yellow ? 0 : 1, alpha: 1)
+    }
+
     var nsColor: NSColor { NSColor(cgColor: cgColor) ?? .white }
 
     /// A light halo behind black and a dark one behind the bright colours.

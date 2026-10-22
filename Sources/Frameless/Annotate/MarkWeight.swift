@@ -8,6 +8,15 @@ enum MarkWeight: String, CaseIterable {
 
     var name: String { rawValue.capitalized }
 
+    /// How wide a numbered step's circle is.
+    var stepDiameter: CGFloat {
+        switch self {
+        case .thin: 18
+        case .medium: 24
+        case .thick: 32
+        }
+    }
+
     var lineWidth: CGFloat {
         switch self {
         case .thin: 2
