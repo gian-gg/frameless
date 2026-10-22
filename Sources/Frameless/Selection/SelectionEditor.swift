@@ -18,8 +18,13 @@ final class SelectionEditor {
         var image: CapturedImage?
     }
 
+    private let preferences: Preferences
     private var window: ScreenCoverWindow?
     private var continuation: CheckedContinuation<Choice?, Never>?
+
+    init(preferences: Preferences) {
+        self.preferences = preferences
+    }
 
     /// Shows the selection on its screen, calls `onShown` once it's up; returns the choice, or nil when closed.
     func present(
@@ -38,6 +43,8 @@ final class SelectionEditor {
     private func show(_ selection: CaptureSelection, for purpose: CapturePurpose, on screen: NSScreen) {
         let window = ScreenCoverWindow(screen: screen)
         let view = SelectionEditorView(selection: selection, purpose: purpose, scale: screen.backingScaleFactor)
+        view.markColor = preferences.annotationColor
+        view.onMarkColorChange = { [preferences] in preferences.annotationColor = $0 }
         view.onFinish = { [weak self] choice in self?.finish(choice) }
         window.contentView = view
         window.makeFirstResponder(view)

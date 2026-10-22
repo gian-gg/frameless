@@ -5,7 +5,7 @@ import Testing
 
 struct MarkHistoryTests {
     private func mark(_ offset: CGFloat) -> Mark {
-        Mark(tool: .rectangle, points: [CGPoint(x: offset, y: 0)], color: CGColor(gray: 1, alpha: 1))
+        Mark(tool: .rectangle, points: [CGPoint(x: offset, y: 0)], color: .white)
     }
 
     @Test("undo takes back the last mark and redo puts it back")

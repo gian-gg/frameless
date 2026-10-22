@@ -32,14 +32,14 @@ enum MarkRenderer {
     private static func draw(_ mark: Mark, in context: CGContext, over image: CGImage, size: CGSize) {
         context.saveGState()
         defer { context.restoreGState() }
-        context.setStrokeColor(mark.color)
+        context.setStrokeColor(mark.color.cgColor)
         context.setLineWidth(Config.Annotate.lineWidth)
         context.setLineJoin(.round)
         context.setLineCap(.round)
         let pixelsPerPoint = abs(context.ctm.a)
         context.setShadow(
             offset: .zero, blur: Config.Annotate.shadowBlur * pixelsPerPoint,
-            color: CGColor(gray: 0, alpha: Config.Annotate.shadowOpacity))
+            color: mark.color.halo)
         switch mark.tool {
         case .rectangle:
             drawRectangle(mark, in: context)

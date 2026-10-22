@@ -22,7 +22,7 @@ struct MarkRendererTests {
     @Test("with marks the result keeps the capture's pixel size, scale and display")
     func keepsGeometry() throws {
         let original = try shot()
-        let mark = Mark(tool: .rectangle, points: [.zero, CGPoint(x: 2, y: 2)], color: CGColor(gray: 1, alpha: 1))
+        let mark = Mark(tool: .rectangle, points: [.zero, CGPoint(x: 2, y: 2)], color: .white)
         let rendered = try #require(MarkRenderer.render(original, marks: [mark]))
         #expect(rendered.image.width == 8)
         #expect(rendered.image.height == 6)
@@ -45,7 +45,7 @@ struct MarkRendererTests {
     func drawsRectangle() throws {
         let shot = try blackShot()
         let mark = Mark(
-            tool: .rectangle, points: [CGPoint(x: 10, y: 10), CGPoint(x: 30, y: 30)], color: Config.Annotate.color)
+            tool: .rectangle, points: [CGPoint(x: 10, y: 10), CGPoint(x: 30, y: 30)], color: .white)
 
         let rendered = try #require(MarkRenderer.render(shot, marks: [mark]))
         let bitmap = NSBitmapImageRep(cgImage: rendered.image)
@@ -59,7 +59,7 @@ struct MarkRendererTests {
     @Test("a line is drawn between its two points and nowhere else")
     func drawsLine() throws {
         let mark = Mark(
-            tool: .line, points: [CGPoint(x: 5, y: 20), CGPoint(x: 35, y: 20)], color: Config.Annotate.color)
+            tool: .line, points: [CGPoint(x: 5, y: 20), CGPoint(x: 35, y: 20)], color: .white)
 
         let rendered = try #require(MarkRenderer.render(try blackShot(), marks: [mark]))
         let bitmap = NSBitmapImageRep(cgImage: rendered.image)
@@ -73,7 +73,7 @@ struct MarkRendererTests {
     @Test("an arrow draws its line and two arms back from its end")
     func drawsArrow() throws {
         let mark = Mark(
-            tool: .arrow, points: [CGPoint(x: 5, y: 20), CGPoint(x: 35, y: 20)], color: Config.Annotate.color)
+            tool: .arrow, points: [CGPoint(x: 5, y: 20), CGPoint(x: 35, y: 20)], color: .white)
 
         let rendered = try #require(MarkRenderer.render(try blackShot(), marks: [mark]))
         let bitmap = NSBitmapImageRep(cgImage: rendered.image)
@@ -91,7 +91,7 @@ struct MarkRendererTests {
     @Test("a freehand stroke is drawn through its points")
     func drawsFreehand() throws {
         let points = stride(from: 5, through: 35, by: 3).map { CGPoint(x: CGFloat($0), y: 20) }
-        let mark = Mark(tool: .freehand, points: points, color: Config.Annotate.color)
+        let mark = Mark(tool: .freehand, points: points, color: .white)
 
         let rendered = try #require(MarkRenderer.render(try blackShot(), marks: [mark]))
         let bitmap = NSBitmapImageRep(cgImage: rendered.image)
@@ -103,7 +103,7 @@ struct MarkRendererTests {
     @Test("a mark's bounds cover all its points, so a closed loop isn't mistaken for a click")
     func boundsCoverAllPoints() {
         let loop = [CGPoint(x: 10, y: 10), CGPoint(x: 30, y: 12), CGPoint(x: 20, y: 30), CGPoint(x: 10, y: 10)]
-        let mark = Mark(tool: .freehand, points: loop, color: Config.Annotate.color)
+        let mark = Mark(tool: .freehand, points: loop, color: .white)
         #expect(MarkRenderer.bounds(of: mark) == CGRect(x: 10, y: 10, width: 20, height: 20))
     }
 }

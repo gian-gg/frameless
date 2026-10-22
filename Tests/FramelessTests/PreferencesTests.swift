@@ -92,4 +92,14 @@ struct PreferencesTests {
         preferences.setSaveFolder(nil, for: .screenshot)
         #expect(Preferences(defaults: defaults).saveFolder(for: .screenshot) == nil)
     }
+
+    @Test("the mark colour starts white and is remembered once changed")
+    func storesAnnotationColor() throws {
+        let defaults = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        #expect(Preferences(defaults: defaults).annotationColor == .white)
+        Preferences(defaults: defaults).annotationColor = .red
+        #expect(Preferences(defaults: defaults).annotationColor == .red)
+    }
 }

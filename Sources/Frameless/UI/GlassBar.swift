@@ -1,12 +1,19 @@
 import AppKit
 
-/// Bottom-of-screen glass bar: an optional capsule of tools, a capsule of buttons, then a round close button.
-/// At most one tool is selected; picking it again clears it.
+/// Bottom-of-screen glass bar: optional capsules of style and of tools, a capsule of buttons, then a round close
+/// button. At most one tool is selected; picking it again clears it.
 final class GlassBar: NSView {
     /// An icon-only toggle in the tools' capsule.
     struct Tool {
         let icon: LucideIcon
         let toolTip: String
+    }
+
+    /// A colour button in its own capsule before the tools.
+    struct Swatch {
+        let color: NSColor
+        let toolTip: String
+        let perform: @MainActor () -> Void
     }
 
     /// A clickable item: an icon, then an optional label and key cap.
@@ -22,14 +29,23 @@ final class GlassBar: NSView {
 
     private var handlers: [@MainActor () -> Void] = []
     private var toolButtons: [BarButton] = []
+    private var swatchButton: BarButton?
     private(set) var selectedTool: Int?
 
-    init(tools: [Tool] = [], items: [Item], closeToolTip: String, close: @escaping @MainActor () -> Void) {
+    init(
+        tools: [Tool] = [], swatch: Swatch? = nil, items: [Item], closeToolTip: String,
+        close: @escaping @MainActor () -> Void
+    ) {
         super.init(frame: .zero)
         let height = Config.Bar.itemHeight + Config.Bar.padding * 2
         var capsuleLeft: CGFloat = 0
+        if let swatch {
+            let styleCapsule = styleCapsule(for: swatch, height: height)
+            addSubview(styleCapsule)
+            capsuleLeft = styleCapsule.frame.maxX + Config.Bar.closeGap
+        }
         if !tools.isEmpty {
-            let toolCapsule = toolCapsule(for: tools, height: height)
+            let toolCapsule = toolCapsule(for: tools, at: capsuleLeft, height: height)
             addSubview(toolCapsule)
             capsuleLeft = toolCapsule.frame.maxX + Config.Bar.closeGap
         }
@@ -77,6 +93,16 @@ final class GlassBar: NSView {
         return button
     }
 
+    /// Shows a new colour in the colour button.
+    func setSwatch(_ color: NSColor) {
+        swatchButton?.swatch = color
+    }
+
+    /// The colour button's frame in the bar's coordinates.
+    var swatchFrame: CGRect? {
+        swatchButton.map { convert($0.bounds, from: $0) }
+    }
+
     /// Marks one tool as selected, or none.
     func selectTool(_ index: Int?) {
         selectedTool = index
@@ -85,8 +111,8 @@ final class GlassBar: NSView {
         }
     }
 
-    /// The tools' own capsule, left of the main capsule.
-    private func toolCapsule(for tools: [Tool], height: CGFloat) -> GlassPanel {
+    /// The tools' own capsule, between the style capsule and the main capsule.
+    private func toolCapsule(for tools: [Tool], at capsuleLeft: CGFloat, height: CGFloat) -> GlassPanel {
         let capsule = GlassPanel()
         var left = Config.Bar.padding
         for (index, tool) in tools.enumerated() {
@@ -101,7 +127,23 @@ final class GlassBar: NSView {
             toolButtons.append(button)
             left += Config.Bar.toolWidth
         }
-        capsule.frame = CGRect(x: 0, y: 0, width: left + Config.Bar.padding, height: height)
+        capsule.frame = CGRect(x: capsuleLeft, y: 0, width: left + Config.Bar.padding, height: height)
+        return capsule
+    }
+
+    /// The style capsule, holding the colour button.
+    private func styleCapsule(for swatch: Swatch, height: CGFloat) -> GlassPanel {
+        let button = BarButton(swatch: swatch.color, toolTip: swatch.toolTip)
+        button.tag = handlers.count
+        handlers.append(swatch.perform)
+        button.target = self
+        button.action = #selector(pressed(_:))
+        button.frame = CGRect(
+            x: Config.Bar.padding, y: Config.Bar.padding, width: Config.Bar.toolWidth, height: Config.Bar.itemHeight)
+        swatchButton = button
+        let capsule = GlassPanel()
+        capsule.content.addSubview(button)
+        capsule.frame = CGRect(x: 0, y: 0, width: Config.Bar.toolWidth + Config.Bar.padding * 2, height: height)
         return capsule
     }
 

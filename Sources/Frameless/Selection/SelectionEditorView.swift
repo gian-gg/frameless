@@ -6,6 +6,14 @@ final class SelectionEditorView: NSView {
     private static let grabTolerance: CGFloat = 8
 
     var onFinish: (@MainActor (SelectionEditor.Choice?) -> Void)?
+    /// The colour new marks are drawn in, shown in the colour button.
+    var markColor = Config.Annotate.defaultColor {
+        didSet {
+            toolbar?.setSwatch(markColor.nsColor)
+            canvas?.color = markColor
+        }
+    }
+    var onMarkColorChange: (@MainActor (MarkColor) -> Void)?
 
     private let selection: CaptureSelection
     private let purpose: CapturePurpose
@@ -19,6 +27,7 @@ final class SelectionEditorView: NSView {
     /// The capture taken when a tool is first picked, shown in place of the live screen from then on.
     private var canvas: AnnotationCanvas?
     private var isFreezing = false
+    private var swatchRow: SwatchRow?
 
     /// A resize or move in progress: what was grabbed, and where the pointer and selection started.
     private struct Drag {
@@ -34,7 +43,8 @@ final class SelectionEditorView: NSView {
         rect = Self.localRect(for: selection)
         super.init(frame: .zero)
         let toolbar = GlassBar(
-            tools: purpose == .screenshot ? Self.tools : [], items: barItems(),
+            tools: purpose == .screenshot ? Self.tools : [], swatch: purpose == .screenshot ? colorSwatch() : nil,
+            items: barItems(),
             closeToolTip: "Close (Esc)",
             close: { [weak self] in self?.onFinish?(nil) })
         toolbar.onSelectTool = { [weak self] index in self?.pick(index.map { AnnotationTool.allCases[$0] }) }
@@ -127,6 +137,7 @@ final class SelectionEditorView: NSView {
                     for: toolbar.frame.size, under: rect, in: bounds, gap: Config.Bar.selectionGap,
                     inset: Config.Style.barBottomOffset))
         }
+        placeSwatchRow()
         sizeTag.setFrameOrigin(
             ScreenGeometry.tagOrigin(for: sizeTag.frame.size, on: rect, in: bounds, lift: Config.Style.tagLift))
     }
@@ -205,7 +216,8 @@ final class SelectionEditorView: NSView {
 
     override func keyDown(with event: NSEvent) {
         switch Int(event.keyCode) {
-        case kVK_Escape: onFinish?(nil)
+        case kVK_Escape:
+            if swatchRow != nil { hideSwatchRow() } else { onFinish?(nil) }
         case kVK_Return, kVK_ANSI_KeypadEnter: choose(purpose == .screenshot ? .copy : .record)
         default:
             guard let tool = tool(for: event) else { return super.keyDown(with: event) }
@@ -241,6 +253,7 @@ extension SelectionEditorView {
     private func showCanvas(for shot: CapturedImage) {
         let canvas = AnnotationCanvas(shot: shot, frame: rect)
         canvas.tool = tool
+        canvas.color = markColor
         addSubview(canvas, positioned: .below, relativeTo: toolbar)
         self.canvas = canvas
     }
@@ -276,5 +289,44 @@ extension SelectionEditorView {
             self?.isFreezing = false
             self?.needsDisplay = true
         }
+    }
+}
+
+// MARK: - Colour
+
+extension SelectionEditorView {
+    fileprivate func colorSwatch() -> GlassBar.Swatch {
+        GlassBar.Swatch(color: markColor.nsColor, toolTip: "Colour") { [weak self] in self?.toggleSwatchRow() }
+    }
+
+    private func toggleSwatchRow() {
+        if swatchRow != nil { return hideSwatchRow() }
+        let row = SwatchRow(
+            swatches: MarkColor.allCases.map { SwatchRow.Swatch(color: $0.nsColor, toolTip: $0.name) },
+            selected: MarkColor.allCases.firstIndex(of: markColor))
+        row.onPick = { [weak self] index in self?.pickColor(MarkColor.allCases[index]) }
+        addSubview(row)
+        swatchRow = row
+        placeSwatchRow()
+    }
+
+    private func pickColor(_ color: MarkColor) {
+        markColor = color
+        onMarkColorChange?(color)
+        hideSwatchRow()
+    }
+
+    private func hideSwatchRow() {
+        swatchRow?.removeFromSuperview()
+        swatchRow = nil
+    }
+
+    /// Centres the row of colours just above the colour button, kept on screen.
+    private func placeSwatchRow() {
+        guard let row = swatchRow, let toolbar, let button = toolbar.swatchFrame else { return }
+        let anchor = convert(button, from: toolbar)
+        let left = min(max(anchor.midX - row.frame.width / 2, bounds.minX), bounds.maxX - row.frame.width)
+        let bottom = toolbar.frame.maxY + Config.Bar.swatchRowGap
+        row.setFrameOrigin(CGPoint(x: left.rounded(), y: bottom.rounded()))
     }
 }

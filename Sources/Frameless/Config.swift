@@ -58,8 +58,8 @@ enum Config {
 
     /// Marks drawn on a frozen screenshot.
     enum Annotate {
-        static let color = CGColor(gray: 1, alpha: 1)
-        /// A soft dark halo behind each mark so light marks stay visible on light screenshots.
+        static let defaultColor = MarkColor.white
+        /// A soft halo behind each mark, dark or light against its colour, so it shows on any screenshot.
         static let shadowBlur: CGFloat = 2
         static let shadowOpacity: CGFloat = 0.5
         static let lineWidth: CGFloat = 3
@@ -124,6 +124,9 @@ enum Config {
         static let iconSize: CGFloat = 14
         /// Width of each icon-only tool button.
         static let toolWidth: CGFloat = 32
+        static let swatchRingOpacity: CGFloat = 0.5
+        /// Gap between the colour button and the row of colours above it.
+        static let swatchRowGap: CGFloat = 8
         /// Tool icons are dimmed to this until selected; the selected one sits on this brighter pill.
         static let unselectedToolOpacity: CGFloat = 0.7
         static let selectedFillOpacity: CGFloat = 0.3

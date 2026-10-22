@@ -5,6 +5,7 @@ import AppKit
 final class AnnotationCanvas: NSView {
     let shot: CapturedImage
     var tool: AnnotationTool?
+    var color = Config.Annotate.defaultColor
     private(set) var history = MarkHistory() {
         didSet { needsDisplay = true }
     }
@@ -51,7 +52,7 @@ final class AnnotationCanvas: NSView {
     override func mouseDown(with event: NSEvent) {
         guard let tool else { return }
         let point = location(of: event)
-        draft = Mark(tool: tool, points: tool == .freehand ? [point] : [point, point], color: Config.Annotate.color)
+        draft = Mark(tool: tool, points: tool == .freehand ? [point] : [point, point], color: color)
     }
 
     override func mouseDragged(with event: NSEvent) {

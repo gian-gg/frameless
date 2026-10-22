@@ -1,6 +1,6 @@
 import AppKit
 
-/// Glass bar item drawn as one centred group: icon, optional label, optional shortcut key cap.
+/// Glass bar item drawn as one centred group: icon or colour swatch, optional label, optional shortcut key cap.
 final class BarButton: NSControl {
     /// What a key cap shows, such as "⌘C".
     enum Shortcut {
@@ -10,7 +10,11 @@ final class BarButton: NSControl {
     private static let keyPadding = CGSize(width: 5, height: 2)
     private static let keyRadius: CGFloat = 4
 
-    private let icon: LucideIcon
+    private let icon: LucideIcon?
+    /// A filled circle in this colour, drawn instead of an icon.
+    var swatch: NSColor? {
+        didSet { needsDisplay = true }
+    }
     private let title: String?
     private let shortcut: Shortcut?
     private let tipText: String?
@@ -22,13 +26,18 @@ final class BarButton: NSControl {
         didSet { needsDisplay = true }
     }
 
-    init(icon: LucideIcon, title: String?, shortcut: Shortcut? = nil, toolTip: String? = nil) {
+    init(icon: LucideIcon?, title: String?, shortcut: Shortcut? = nil, toolTip: String? = nil) {
         self.icon = icon
         self.title = title
         self.shortcut = shortcut
         self.tipText = toolTip
         super.init(frame: .zero)
         setAccessibilityHelp(toolTip)
+    }
+
+    convenience init(swatch: NSColor, toolTip: String) {
+        self.init(icon: nil, title: nil, toolTip: toolTip)
+        self.swatch = swatch
     }
 
     @available(*, unavailable)
@@ -58,7 +67,22 @@ final class BarButton: NSControl {
     private var iconImage: NSImage {
         let color: NSColor =
             isToggle && !isSelected ? .labelColor.withAlphaComponent(Config.Bar.unselectedToolOpacity) : .labelColor
-        return icon.image(size: Config.Bar.iconSize, color: color)
+        if let swatch { return Self.swatchImage(swatch) }
+        return icon?.image(size: Config.Bar.iconSize, color: color) ?? NSImage()
+    }
+
+    /// A filled circle with a faint light ring, so dark colours still show on dark glass.
+    private static func swatchImage(_ color: NSColor) -> NSImage {
+        let side = Config.Bar.iconSize
+        return NSImage(size: CGSize(width: side, height: side), flipped: false) { bounds in
+            let circle = NSBezierPath(ovalIn: bounds.insetBy(dx: 1, dy: 1))
+            color.setFill()
+            circle.fill()
+            NSColor.white.withAlphaComponent(Config.Bar.swatchRingOpacity).setStroke()
+            circle.lineWidth = 1
+            circle.stroke()
+            return true
+        }
     }
 
     private var titleText: NSAttributedString? {

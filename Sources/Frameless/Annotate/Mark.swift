@@ -4,5 +4,5 @@ import CoreGraphics
 struct Mark: Equatable {
     let tool: AnnotationTool
     var points: [CGPoint]
-    let color: CGColor
+    let color: MarkColor
 }

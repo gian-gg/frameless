@@ -11,6 +11,7 @@ final class Preferences {
         static let frameRate = "frameRate"
         static let resolution = "resolution"
         static let playsSounds = "playsSounds"
+        static let annotationColor = "annotationColor"
         static func shortcut(_ action: Hotkeys.Action) -> String { "shortcut.\(action)" }
         static func saveFolder(_ purpose: CapturePurpose) -> String { "saveFolder.\(purpose)" }
     }
@@ -67,6 +68,15 @@ final class Preferences {
     var playsSounds: Bool {
         get { defaults.bool(forKey: Key.playsSounds) }
         set { defaults.set(newValue, forKey: Key.playsSounds) }
+    }
+
+    /// The colour new marks are drawn in.
+    var annotationColor: MarkColor {
+        get {
+            defaults.string(forKey: Key.annotationColor).flatMap(MarkColor.init(rawValue:))
+                ?? Config.Annotate.defaultColor
+        }
+        set { defaults.set(newValue.rawValue, forKey: Key.annotationColor) }
     }
 
     /// An action's shortcut: the default until changed, nil once cleared.
