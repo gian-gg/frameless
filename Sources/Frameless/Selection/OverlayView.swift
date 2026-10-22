@@ -166,13 +166,13 @@ final class OverlayView: NSView {
         bar?.isHidden = !showsBar
     }
 
-    /// Rebuilds the bottom bar for the current mode: buttons with their keys, and Cancel.
+    /// Rebuilds the bottom bar for the current mode: buttons naming their keys in tooltips, and Cancel.
     private func rebuildBar() {
         bar?.removeFromSuperview()
         let size = ScreenGeometry.evenPixelSize(bounds.size, scale: scale)
         let display = GlassBar.Item(
-            icon: Config.Overlay.displayIcon, title: Config.Overlay.displayButton, shortcut: .text("↩"),
-            toolTip: "\(Config.Overlay.displayTitle(purpose.verb)) (\(size.width) × \(size.height))",
+            icon: Config.Overlay.displayIcon, title: Config.Overlay.displayButton, shortcut: nil,
+            toolTip: "\(Config.Overlay.displayTitle(purpose.verb)), \(size.width) × \(size.height) (↩)",
             perform: { [weak self] in self?.onFinish?(.display) })
         let items: [GlassBar.Item] =
             switch mode {
@@ -180,14 +180,13 @@ final class OverlayView: NSView {
                 [
                     display,
                     .init(
-                        icon: Config.Overlay.windowIcon, title: Config.Overlay.windowHint,
-                        shortcut: .icon(.space),
+                        icon: Config.Overlay.windowIcon, title: Config.Overlay.windowHint, shortcut: nil,
                         toolTip: "Pick a window (Space)", perform: { [weak self] in self?.onToggleMode?() }),
                 ]
             case .window:
                 [
                     .init(
-                        icon: Config.Overlay.dragIcon, title: Config.Overlay.screenHint, shortcut: .icon(.space),
+                        icon: Config.Overlay.dragIcon, title: Config.Overlay.screenHint, shortcut: nil,
                         toolTip: "Back to display or area (Space)", perform: { [weak self] in self?.onToggleMode?() })
                 ]
             }

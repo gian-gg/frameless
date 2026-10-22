@@ -22,25 +22,21 @@ final class SelectionEditor {
 
     /// Shows the selection on its screen, calls `onShown` once it's up; returns the choice, or nil when closed.
     func present(
-        _ selection: CaptureSelection, for purpose: CapturePurpose, savingTo folderName: String = "",
-        onShown: @MainActor () -> Void = {}
+        _ selection: CaptureSelection, for purpose: CapturePurpose, onShown: @MainActor () -> Void = {}
     ) async -> Choice? {
         guard continuation == nil,
             let screen = NSScreen.screens.first(where: { $0.displayID == selection.displayID })
         else { return nil }
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
-            show(selection, for: purpose, savingTo: folderName, on: screen)
+            show(selection, for: purpose, on: screen)
             onShown()
         }
     }
 
-    private func show(
-        _ selection: CaptureSelection, for purpose: CapturePurpose, savingTo folderName: String, on screen: NSScreen
-    ) {
+    private func show(_ selection: CaptureSelection, for purpose: CapturePurpose, on screen: NSScreen) {
         let window = ScreenCoverWindow(screen: screen)
-        let view = SelectionEditorView(
-            selection: selection, purpose: purpose, folderName: folderName, scale: screen.backingScaleFactor)
+        let view = SelectionEditorView(selection: selection, purpose: purpose, scale: screen.backingScaleFactor)
         view.onFinish = { [weak self] choice in self?.finish(choice) }
         window.contentView = view
         window.makeFirstResponder(view)

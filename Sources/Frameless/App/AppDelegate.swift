@@ -319,8 +319,7 @@ extension AppDelegate {
             defer { selector.dismiss() }
             guard
                 let choice = await editor.present(
-                    selection, for: .screenshot, savingTo: Self.displayPath(shownFolder(for: .screenshot)),
-                    onShown: { [selector] in selector.dismiss() })
+                    selection, for: .screenshot, onShown: { [selector] in selector.dismiss() })
             else {
                 return
             }

@@ -2,10 +2,9 @@ import AppKit
 
 /// Glass bar item drawn as one centred group: icon, optional label, optional shortcut key cap.
 final class BarButton: NSControl {
-    /// What a key cap shows: text such as "⌘C", or an icon such as the space bar.
+    /// What a key cap shows, such as "⌘C".
     enum Shortcut {
         case text(String)
-        case icon(LucideIcon)
     }
 
     private static let keyPadding = CGSize(width: 5, height: 2)
@@ -14,6 +13,8 @@ final class BarButton: NSControl {
     private let icon: LucideIcon
     private let title: String?
     private let shortcut: Shortcut?
+    private let tipText: String?
+    private let tip = HoverTip()
     private var isHovering = false {
         didSet { needsDisplay = true }
     }
@@ -25,8 +26,9 @@ final class BarButton: NSControl {
         self.icon = icon
         self.title = title
         self.shortcut = shortcut
+        self.tipText = toolTip
         super.init(frame: .zero)
-        self.toolTip = toolTip
+        setAccessibilityHelp(toolTip)
     }
 
     @available(*, unavailable)
@@ -72,7 +74,7 @@ final class BarButton: NSControl {
 
     private static var keyFont: NSFont { Panel.font(size: Config.Bar.shortcutSize, weight: .medium) }
 
-    /// The key cap's content: text or an icon, both sized to the key font.
+    /// The key cap's content, sized to the key font.
     private var keyContent: (size: CGSize, draw: (CGRect) -> Void)? {
         switch shortcut {
         case .text(let string):
@@ -80,18 +82,6 @@ final class BarButton: NSControl {
                 string: string, attributes: [.font: Self.keyFont, .foregroundColor: NSColor.secondaryLabelColor])
             let size = text.size()
             return (size, { text.draw(at: CGPoint(x: $0.midX - size.width / 2, y: $0.midY - size.height / 2)) })
-        case .icon(let name):
-            let image = name.image(size: Config.Bar.shortcutIconSize, color: .secondaryLabelColor)
-            let size = image.size
-            return (
-                size,
-                {
-                    image.draw(
-                        in: CGRect(
-                            x: $0.midX - size.width / 2, y: $0.midY - size.height / 2, width: size.width,
-                            height: size.height))
-                }
-            )
         case nil:
             return nil
         }
@@ -165,14 +155,22 @@ final class BarButton: NSControl {
 
     override func mouseEntered(with event: NSEvent) {
         isHovering = true
+        if let tipText { tip.schedule(tipText, for: self) }
     }
 
     override func mouseExited(with event: NSEvent) {
         isHovering = false
+        tip.hide()
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        super.viewWillMove(toWindow: newWindow)
+        if newWindow == nil { tip.hide() }
     }
 
     override func mouseDown(with event: NSEvent) {
         isPressed = true
+        tip.hide()
     }
 
     override func mouseDragged(with event: NSEvent) {

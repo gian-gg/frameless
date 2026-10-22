@@ -25,7 +25,6 @@ enum LucideIcon: CaseIterable {
     case monitor
     case appWindow
     case squareDashed
-    case space
     case eraser
     case keyboard
     case triangleAlert
@@ -114,7 +113,6 @@ enum LucideIcon: CaseIterable {
             #"<path d="M9 21h1"/>"#, #"<path d="M14 3h1"/>"#, #"<path d="M14 21h1"/>"#, #"<path d="M3 9v1"/>"#,
             #"<path d="M21 9v1"/>"#, #"<path d="M3 14v1"/>"#, #"<path d="M21 14v1"/>"#,
         ],
-        .space: [#"<path d="M22 17v1c0 .5-.5 1-1 1H3c-.5 0-1-.5-1-1v-1"/>"#],
         .eraser: [
             #"<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/>"#,
             #"<path d="M22 21H7"/>"#, #"<path d="m5 11 9 9"/>"#,

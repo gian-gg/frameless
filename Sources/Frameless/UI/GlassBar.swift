@@ -1,13 +1,19 @@
 import AppKit
 
-/// Bottom-of-screen glass bar: an optional capsule of tools, a capsule of buttons showing their shortcuts, then a
-/// round close button. At most one tool is selected; picking it again clears it.
+/// Bottom-of-screen glass bar: an optional capsule of tools, a capsule of buttons, then a round close button.
+/// At most one tool is selected; picking it again clears it.
 final class GlassBar: NSView {
-    /// A clickable item showing its keyboard shortcut.
+    /// An icon-only toggle in the tools' capsule.
+    struct Tool {
+        let icon: LucideIcon
+        let toolTip: String
+    }
+
+    /// A clickable item, with a key cap when it has a shortcut to show.
     struct Item {
         let icon: LucideIcon
         let title: String
-        let shortcut: BarButton.Shortcut
+        let shortcut: BarButton.Shortcut?
         let toolTip: String
         let perform: @MainActor () -> Void
     }
@@ -18,7 +24,7 @@ final class GlassBar: NSView {
     private var toolButtons: [BarButton] = []
     private(set) var selectedTool: Int?
 
-    init(tools: [LucideIcon] = [], items: [Item], closeToolTip: String, close: @escaping @MainActor () -> Void) {
+    init(tools: [Tool] = [], items: [Item], closeToolTip: String, close: @escaping @MainActor () -> Void) {
         super.init(frame: .zero)
         let height = Config.Bar.itemHeight + Config.Bar.padding * 2
         var capsuleLeft: CGFloat = 0
@@ -80,11 +86,11 @@ final class GlassBar: NSView {
     }
 
     /// The tools' own capsule, left of the main capsule.
-    private func toolCapsule(for tools: [LucideIcon], height: CGFloat) -> GlassPanel {
+    private func toolCapsule(for tools: [Tool], height: CGFloat) -> GlassPanel {
         let capsule = GlassPanel()
         var left = Config.Bar.padding
         for (index, tool) in tools.enumerated() {
-            let button = BarButton(icon: tool, title: nil)
+            let button = BarButton(icon: tool.icon, title: nil, toolTip: tool.toolTip)
             button.isToggle = true
             button.tag = index
             button.target = self

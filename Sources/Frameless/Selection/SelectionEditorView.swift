@@ -9,8 +9,6 @@ final class SelectionEditorView: NSView {
 
     private let selection: CaptureSelection
     private let purpose: CapturePurpose
-    /// Where Save puts the screenshot, for its tooltip.
-    private let folderName: String
     private let scale: CGFloat
     /// The selection in this screen's local points; fixed for a window, editable otherwise.
     private var rect: CGRect
@@ -29,15 +27,14 @@ final class SelectionEditorView: NSView {
         let startRect: CGRect
     }
 
-    init(selection: CaptureSelection, purpose: CapturePurpose, folderName: String, scale: CGFloat) {
+    init(selection: CaptureSelection, purpose: CapturePurpose, scale: CGFloat) {
         self.selection = selection
         self.purpose = purpose
-        self.folderName = folderName
         self.scale = scale
         rect = Self.localRect(for: selection)
         super.init(frame: .zero)
         let toolbar = GlassBar(
-            tools: purpose == .screenshot ? AnnotationTool.allCases.map(\.icon) : [], items: barItems(),
+            tools: purpose == .screenshot ? Self.tools : [], items: barItems(),
             closeToolTip: "Close (Esc)",
             close: { [weak self] in self?.onFinish?(nil) })
         toolbar.onSelectTool = { [weak self] index in self?.pick(index.map { AnnotationTool.allCases[$0] }) }
@@ -93,21 +90,20 @@ final class SelectionEditorView: NSView {
         case .screenshot:
             [
                 .init(
-                    icon: .copy, title: "Copy", shortcut: .text("⌘C"), toolTip: "Copy to the clipboard",
+                    icon: .copy, title: "Copy", shortcut: nil, toolTip: "Copy to the clipboard (⌘C)",
                     perform: { [weak self] in self?.choose(.copy) }),
                 .init(
-                    icon: .download, title: "Save", shortcut: .text("⌘S"),
-                    toolTip: "Save to \(folderName)",
+                    icon: .download, title: "Save", shortcut: nil, toolTip: "Save (⌘S)",
                     perform: { [weak self] in self?.choose(.save) }),
                 .init(
-                    icon: .pin, title: "Pin", shortcut: .text("⌘P"), toolTip: "Pin on screen",
+                    icon: .pin, title: "Pin", shortcut: nil, toolTip: "Pin on screen (⌘P)",
                     perform: { [weak self] in self?.choose(.pin) }),
             ]
         case .recording:
             [
                 .init(
-                    icon: .circleDot, title: "Record", shortcut: .text("↩"),
-                    toolTip: "Start recording", perform: { [weak self] in self?.choose(.record) })
+                    icon: .circleDot, title: "Record", shortcut: nil, toolTip: "Start recording (↩)",
+                    perform: { [weak self] in self?.choose(.record) })
             ]
         }
     }
@@ -231,6 +227,13 @@ final class SelectionEditorView: NSView {
 // MARK: - Annotation tools
 
 extension SelectionEditorView {
+    /// The annotation tools, each tooltip naming its key.
+    private static var tools: [GlassBar.Tool] {
+        AnnotationTool.allCases.map {
+            GlassBar.Tool(icon: $0.icon, toolTip: "\($0.name) (\(String($0.key).uppercased()))")
+        }
+    }
+
     /// The tool a bare key press picks, for screenshots only.
     private func tool(for event: NSEvent) -> AnnotationTool? {
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting(.capsLock)

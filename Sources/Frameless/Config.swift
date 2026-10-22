@@ -111,7 +111,9 @@ enum Config {
         static let selectedFillOpacity: CGFloat = 0.3
         static let titleSize: CGFloat = 12
         static let shortcutSize: CGFloat = 11
-        static let shortcutIconSize: CGFloat = 12
+        /// How long a button is hovered before its tooltip shows, and its gap from the button.
+        static let tipDelay: TimeInterval = 0.5
+        static let tipGap: CGFloat = 10
     }
 
     /// Display and area picker.

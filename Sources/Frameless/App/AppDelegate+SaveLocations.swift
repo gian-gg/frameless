@@ -21,7 +21,7 @@ extension AppDelegate {
     }
 
     /// The chosen folder, or `<default>/Frameless`, without creating anything.
-    func shownFolder(for purpose: CapturePurpose) -> URL {
+    private func shownFolder(for purpose: CapturePurpose) -> URL {
         preferences.saveFolder(for: purpose)
             ?? purpose.defaultSaveBase.appending(path: Config.Output.folderName, directoryHint: .isDirectory)
     }

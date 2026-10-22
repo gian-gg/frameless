@@ -9,6 +9,19 @@ enum AnnotationTool: CaseIterable {
     case steps
     case text
 
+    var name: String {
+        switch self {
+        case .rectangle: "Rectangle"
+        case .line: "Line"
+        case .arrow: "Arrow"
+        case .freehand: "Draw"
+        case .highlight: "Highlight"
+        case .pixelate: "Pixelate"
+        case .steps: "Steps"
+        case .text: "Text"
+        }
+    }
+
     var icon: LucideIcon {
         switch self {
         case .rectangle: .square

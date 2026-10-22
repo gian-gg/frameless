@@ -1,8 +1,9 @@
 import AppKit
 
-/// Small glass capsule holding a monospaced label, such as a selection's pixel size.
+/// Small glass capsule holding a label, monospaced by default, such as a selection's pixel size.
 final class GlassTag: GlassPanel {
     private let label = NSTextField(labelWithString: "")
+    var isMonospaced = true
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -13,7 +14,7 @@ final class GlassTag: GlassPanel {
     func show(_ text: String) {
         guard label.stringValue != text else { return }
         label.stringValue = text
-        label.font = Panel.font(size: 11, weight: .semibold, monospaced: true)
+        label.font = Panel.font(size: 11, weight: .semibold, monospaced: isMonospaced)
         label.textColor = .labelColor
         let textSize = label.intrinsicContentSize
         let padding = Config.Style.tagPadding
