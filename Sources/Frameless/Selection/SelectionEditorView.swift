@@ -116,21 +116,21 @@ final class SelectionEditorView: NSView {
             target: isWholeScreen ? .display : .area(rect))
     }
 
-    /// Copy, Save, Pin and Scroll for a screenshot; Record for a recording.
+    /// Scroll, Pin, Save and Copy for a screenshot, the most used nearest the close button; Record for a recording.
     private func barItems() -> [GlassBar.Item] {
         switch purpose {
         case .screenshot:
             [
+                scrollItem,
                 .init(
-                    icon: .copy, title: nil, shortcut: nil, toolTip: "Copy to the clipboard (⌘C)",
-                    perform: { [weak self] in self?.choose(.copy) }),
+                    icon: .pin, title: nil, shortcut: nil, toolTip: "Pin on screen (⌘P)",
+                    perform: { [weak self] in self?.choose(.pin) }),
                 .init(
                     icon: .download, title: nil, shortcut: nil, toolTip: "Save (⌘S)",
                     perform: { [weak self] in self?.choose(.save) }),
                 .init(
-                    icon: .pin, title: nil, shortcut: nil, toolTip: "Pin on screen (⌘P)",
-                    perform: { [weak self] in self?.choose(.pin) }),
-                scrollItem,
+                    icon: .copy, title: nil, shortcut: nil, toolTip: "Copy to the clipboard (⌘C)",
+                    perform: { [weak self] in self?.choose(.copy) }),
             ]
         case .recording:
             [
@@ -143,7 +143,7 @@ final class SelectionEditorView: NSView {
 
     private var scrollItem: GlassBar.Item {
         .init(
-            icon: .chevronsDown, title: nil, shortcut: nil, toolTip: "Scrolling screenshot",
+            icon: .chevronsDown, title: nil, shortcut: nil, toolTip: "Scrolling screenshot (⌘L)",
             perform: { [weak self] in self?.choose(.scroll) })
     }
 
@@ -286,6 +286,7 @@ final class SelectionEditorView: NSView {
         case (kVK_ANSI_C, .command): choose(.copy)
         case (kVK_ANSI_S, .command): choose(.save)
         case (kVK_ANSI_P, .command): choose(.pin)
+        case (kVK_ANSI_L, .command): choose(.scroll)
         case (kVK_ANSI_Z, .command): canvas?.undo()
         case (kVK_ANSI_Z, [.command, .shift]): canvas?.redo()
         default: return super.performKeyEquivalent(with: event)
@@ -298,7 +299,7 @@ final class SelectionEditorView: NSView {
 
 extension SelectionEditorView {
     /// Where the scroll item sits in the bar.
-    private static let scrollItemIndex = 3
+    private static let scrollItemIndex = 0
 
     /// Scrolling follows an area or a window, but not the whole screen.
     private var canScroll: Bool {
@@ -310,7 +311,7 @@ extension SelectionEditorView {
         toolbar?.setItem(
             at: Self.scrollItemIndex, enabled: canScroll,
             toolTip: canScroll
-                ? "Scrolling screenshot"
+                ? "Scrolling screenshot (⌘L)"
                 : "Scrolling screenshots need an area or a window; resize the selection to use one")
     }
 }

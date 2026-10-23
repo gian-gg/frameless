@@ -21,14 +21,14 @@ final class ScrollResult {
         let bar = GlassBar(
             items: [
                 .init(
-                    icon: .copy, title: nil, shortcut: nil, toolTip: "Copy to the clipboard (⌘C)",
-                    perform: { [weak self] in self?.finish(.copy) }),
+                    icon: .pin, title: nil, shortcut: nil, toolTip: "Pin on screen (⌘P)",
+                    perform: { [weak self] in self?.finish(.pin) }),
                 .init(
                     icon: .download, title: nil, shortcut: nil, toolTip: "Save (⌘S)",
                     perform: { [weak self] in self?.finish(.save) }),
                 .init(
-                    icon: .pin, title: nil, shortcut: nil, toolTip: "Pin on screen (⌘P)",
-                    perform: { [weak self] in self?.finish(.pin) }),
+                    icon: .copy, title: nil, shortcut: nil, toolTip: "Copy to the clipboard (⌘C)",
+                    perform: { [weak self] in self?.finish(.copy) }),
             ], closeToolTip: "Close (Esc)", close: { [weak self] in self?.finish(nil) })
         let panel = ScrollResultPanel(shot: shot, bar: bar, on: screen)
         panel.onAction = { [weak self] action in self?.finish(action) }
