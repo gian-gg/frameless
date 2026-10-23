@@ -90,6 +90,12 @@ enum Config {
         static let freehandSpacing: CGFloat = 2
     }
 
+    /// Scrolling screenshots stitched from frames.
+    enum Scroll {
+        /// The share of detailed rows that must line up for a frame to count as scrolled.
+        static let matchShare: Double = 0.95
+    }
+
     /// Screenshots pinned on screen.
     enum Pin {
         static let cornerRadius: CGFloat = 6
