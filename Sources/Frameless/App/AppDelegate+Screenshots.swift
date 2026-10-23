@@ -33,10 +33,7 @@ extension AppDelegate {
             else {
                 return
             }
-            if choice.action == .scroll {
-                _ = await scroller.run(over: choice.selection)
-                return
-            }
+            if choice.action == .scroll { return await scrollCapture(choice.selection) }
             do {
                 let shot = try await Screenshotter.image(for: choice)
                 switch choice.action {
@@ -59,6 +56,13 @@ extension AppDelegate {
                 showError("Couldn't take screenshot", error)
             }
         }
+    }
+
+    /// Stitches a scrolling screenshot of the area and copies it.
+    private func scrollCapture(_ selection: CaptureSelection) async {
+        guard let tall = await scroller.run(over: selection) else { return }
+        Screenshotter.copy(tall)
+        playSound(.screenshot)
     }
 
     func hasScreenRecordingAccess() -> Bool {

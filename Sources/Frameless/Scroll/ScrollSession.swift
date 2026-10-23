@@ -1,23 +1,70 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Scroll mode: the area stays outlined over the live screen, letting scrolls through to the app beneath, with a
-/// small bar to finish or cancel.
+/// Scroll mode: the area stays outlined over the live screen, letting scrolls through to the app beneath, while frames
+/// that have settled are stitched into one tall image, previewed beside it; a small bar finishes or cancels.
 @MainActor
 final class ScrollSession {
     private let outline = AreaOutline()
+    private let preview = ScrollPreview()
     private var panel: ScrollBarPanel?
+    private var capture: ScrollCapture?
+    private var stitcher = Stitcher()
+    private var pending: Stitcher.Frame?
+    private var settleTask: Task<Void, Never>?
     private var continuation: CheckedContinuation<Bool, Never>?
 
-    /// Runs until Done or Return (true) or Cancel or Esc (false).
-    func run(over selection: CaptureSelection) async -> Bool {
-        guard continuation == nil, let area = selection.area else { return false }
-        return await withCheckedContinuation { continuation in
+    /// Runs until Done or Return, giving the stitched image, or Cancel or Esc, giving nil.
+    func run(over selection: CaptureSelection) async -> CapturedImage? {
+        guard continuation == nil, let area = selection.area else { return nil }
+        stitcher = Stitcher()
+        let globalArea = area.offsetBy(dx: selection.screenFrame.minX, dy: selection.screenFrame.minY)
+        outline.show(selection)
+        preview.show(beside: globalArea, on: selection.screenFrame)
+        let capture = ScrollCapture { [weak self] frame in
+            Task { @MainActor in self?.received(frame) }
+        }
+        self.capture = capture
+        let scale: CGFloat
+        do {
+            scale = try await capture.start(selection)
+        } catch {
+            end()
+            return nil
+        }
+        let isDone = await withCheckedContinuation { continuation in
             self.continuation = continuation
-            outline.show(selection)
-            showBar(
-                under: area.offsetBy(dx: selection.screenFrame.minX, dy: selection.screenFrame.minY),
-                on: selection.screenFrame)
+            showBar(under: globalArea, on: selection.screenFrame)
+        }
+        await capture.stop()
+        if isDone { stitchPending() }
+        end()
+        guard isDone, let image = stitcher.image() else { return nil }
+        return CapturedImage(image: image, scale: scale, displayID: selection.displayID)
+    }
+
+    /// Holds the latest frame until the area stops changing for a moment, then stitches it in.
+    private func received(_ frame: Stitcher.Frame) {
+        pending = frame
+        settleTask?.cancel()
+        settleTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Config.Scroll.settleDelay))
+            guard !Task.isCancelled else { return }
+            self?.stitchPending()
+        }
+    }
+
+    private func stitchPending() {
+        settleTask?.cancel()
+        guard let frame = pending, stitcher.height < Config.Scroll.maxHeight else { return }
+        pending = nil
+        switch stitcher.add(frame) {
+        case .started, .added:
+            if let image = stitcher.image() { preview.update(image) }
+        case .lost:
+            preview.showHint("Scroll back a little")
+        case .unchanged:
+            break
         }
     }
 
@@ -40,11 +87,18 @@ final class ScrollSession {
     }
 
     private func finish(_ isDone: Bool) {
-        outline.hide()
-        panel?.orderOut(nil)
-        panel = nil
         continuation?.resume(returning: isDone)
         continuation = nil
+    }
+
+    private func end() {
+        settleTask?.cancel()
+        pending = nil
+        capture = nil
+        outline.hide()
+        preview.hide()
+        panel?.orderOut(nil)
+        panel = nil
     }
 }
 

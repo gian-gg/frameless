@@ -94,6 +94,14 @@ enum Config {
     enum Scroll {
         /// The share of detailed rows that must line up for a frame to count as scrolled.
         static let matchShare: Double = 0.95
+        static let framesPerSecond: Int32 = 15
+        /// How long the area must hold still before a frame is stitched in.
+        static let settleDelay: TimeInterval = 0.15
+        /// The tallest a stitched image may grow, in pixels.
+        static let maxHeight = 20_000
+        /// The live preview beside the area: its width and gap.
+        static let previewWidth: CGFloat = 140
+        static let previewGap: CGFloat = 12
     }
 
     /// Screenshots pinned on screen.
