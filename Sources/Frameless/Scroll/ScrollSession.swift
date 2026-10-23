@@ -1,8 +1,8 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Scroll mode: the area stays outlined over the live screen, letting scrolls through to the app beneath, while frames
-/// that have settled are stitched into one tall image, previewed beside it; a small bar finishes or cancels.
+/// Scroll mode: the area stays outlined over the live screen, letting scrolls through to the app beneath, while each
+/// frame is stitched into one tall image, previewed beside it; a small bar finishes or cancels.
 @MainActor
 final class ScrollSession {
     private let outline = AreaOutline()
@@ -10,8 +10,6 @@ final class ScrollSession {
     private var panel: ScrollBarPanel?
     private var capture: ScrollCapture?
     private var stitcher = Stitcher()
-    private var pending: Stitcher.Frame?
-    private var settleTask: Task<Void, Never>?
     private var continuation: CheckedContinuation<Bool, Never>?
 
     /// Runs until Done or Return, giving the stitched image, or Cancel or Esc, giving nil.
@@ -37,27 +35,14 @@ final class ScrollSession {
             showBar(under: globalArea, on: selection.screenFrame)
         }
         await capture.stop()
-        if isDone { stitchPending() }
         end()
         guard isDone, let image = stitcher.image() else { return nil }
         return CapturedImage(image: image, scale: scale, displayID: selection.displayID)
     }
 
-    /// Holds the latest frame until the area stops changing for a moment, then stitches it in.
+    /// Stitches a new frame in as it arrives, until the image reaches its height limit.
     private func received(_ frame: Stitcher.Frame) {
-        pending = frame
-        settleTask?.cancel()
-        settleTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(Config.Scroll.settleDelay))
-            guard !Task.isCancelled else { return }
-            self?.stitchPending()
-        }
-    }
-
-    private func stitchPending() {
-        settleTask?.cancel()
-        guard let frame = pending, stitcher.height < Config.Scroll.maxHeight else { return }
-        pending = nil
+        guard stitcher.height < Config.Scroll.maxHeight else { return }
         switch stitcher.add(frame) {
         case .started, .added:
             if let image = stitcher.image() { preview.update(image) }
@@ -92,8 +77,6 @@ final class ScrollSession {
     }
 
     private func end() {
-        settleTask?.cancel()
-        pending = nil
         capture = nil
         outline.hide()
         preview.hide()
@@ -113,6 +96,7 @@ private final class ScrollBarPanel: NSPanel {
         backgroundColor = .clear
         hasShadow = false
         hidesOnDeactivate = false
+        sharingType = .none
         isReleasedWhenClosed = false
         animationBehavior = .none
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]

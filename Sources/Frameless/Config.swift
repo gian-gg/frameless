@@ -92,11 +92,14 @@ enum Config {
 
     /// Scrolling screenshots stitched from frames.
     enum Scroll {
-        /// The share of detailed rows that must line up for a frame to count as scrolled.
-        static let matchShare: Double = 0.95
-        static let framesPerSecond: Int32 = 15
-        /// How long the area must hold still before a frame is stitched in.
-        static let settleDelay: TimeInterval = 0.15
+        /// The strips each row is split into across, and the share of detailed strips that must line up.
+        static let strips = 8
+        static let matchShare = 0.6
+        /// A weaker share that still counts when no other shift comes within half of it.
+        static let clearMatchShare = 0.25
+        static let framesPerSecond: Int32 = 30
+        /// A frame counts as scrolled only when at least 1 in this many of its rows changed.
+        static let minimumMovingShare = 3
         /// The tallest a stitched image may grow, in pixels.
         static let maxHeight = 20_000
         /// The live preview beside the area: its width and gap.

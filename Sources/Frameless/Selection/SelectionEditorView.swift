@@ -114,7 +114,7 @@ final class SelectionEditorView: NSView {
             target: isWholeScreen ? .display : .area(rect))
     }
 
-    /// Copy, Save and Pin for a screenshot; Record for a recording.
+    /// Copy, Save, Pin and Scroll for a screenshot; Record for a recording.
     private func barItems() -> [GlassBar.Item] {
         switch purpose {
         case .screenshot:
@@ -128,7 +128,8 @@ final class SelectionEditorView: NSView {
                 .init(
                     icon: .pin, title: nil, shortcut: nil, toolTip: "Pin on screen (⌘P)",
                     perform: { [weak self] in self?.choose(.pin) }),
-            ] + (isWindow ? [] : [scrollItem])
+                scrollItem,
+            ]
         case .recording:
             [
                 .init(

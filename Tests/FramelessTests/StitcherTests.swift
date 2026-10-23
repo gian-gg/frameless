@@ -3,7 +3,7 @@ import Testing
 @testable import Frameless
 
 struct StitcherTests {
-    private let width = 6
+    private let width = 16
 
     /// A detailed row unique to `index`.
     private func row(_ index: Int) -> [UInt8] {
@@ -75,5 +75,58 @@ struct StitcherTests {
         var stitcher = Stitcher()
         _ = stitcher.add(frame(Array(tall[0..<40])))
         #expect(stitcher.add(frame(Array(tall[20..<60]))) == .lost)
+    }
+
+    @Test("a small changing strip, such as a blinking cursor, isn't taken for a scroll")
+    func ignoresSmallChanges() {
+        var rows = page(30)
+        var stitcher = Stitcher()
+        _ = stitcher.add(frame(rows))
+        rows[14] = row(999)
+        rows[15] = row(998)
+        #expect(stitcher.add(frame(rows)) == .unchanged)
+        #expect(stitcher.height == 30)
+    }
+
+    @Test("a frame whose content moved but has one strip animating still stitches")
+    func toleratesAnimatedStrip() {
+        let tall = page(60)
+        var stitcher = Stitcher()
+        _ = stitcher.add(frame(Array(tall[0..<30])))
+        let moved = tall[10..<40].enumerated().map { index, row in
+            var row = row
+            row[0] = UInt8(index * 13 % 256)
+            row[4] = UInt8(index * 29 % 256)
+            return row
+        }
+        #expect(stitcher.add(frame(moved)) == .added(rows: 10))
+        #expect(stitcher.height == 40)
+    }
+
+    @Test("an animation in place, with nothing scrolled, adds nothing")
+    func ignoresAnimationInPlace() {
+        let rows = page(30)
+        var stitcher = Stitcher()
+        _ = stitcher.add(frame(rows))
+        let animated = rows.enumerated().map { index, row in
+            var row = row
+            row[0] = UInt8(index * 13 % 256 + 1)
+            return row
+        }
+        #expect(stitcher.add(frame(animated)) == .unchanged)
+        #expect(stitcher.height == 30)
+    }
+
+    @Test("a frame with most of its content changed still stitches when one shift clearly lines up")
+    func acceptsClearWinner() {
+        let tall = page(60)
+        var stitcher = Stitcher()
+        _ = stitcher.add(frame(Array(tall[0..<30])))
+        let changed = tall[10..<40].enumerated().map { index, row in
+            var row = row
+            for byte in 0..<40 { row[byte] = UInt8((index * 31 + byte * 17) % 256) }
+            return row
+        }
+        #expect(stitcher.add(frame(changed)) == .added(rows: 10))
     }
 }
