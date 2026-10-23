@@ -128,7 +128,7 @@ final class SelectionEditorView: NSView {
                 .init(
                     icon: .pin, title: nil, shortcut: nil, toolTip: "Pin on screen (⌘P)",
                     perform: { [weak self] in self?.choose(.pin) }),
-            ]
+            ] + (isWindow ? [] : [scrollItem])
         case .recording:
             [
                 .init(
@@ -138,8 +138,20 @@ final class SelectionEditorView: NSView {
         }
     }
 
+    private var scrollItem: GlassBar.Item {
+        .init(
+            icon: .chevronsDown, title: nil, shortcut: nil, toolTip: "Scrolling screenshot",
+            perform: { [weak self] in self?.choose(.scroll) })
+    }
+
     private func choose(_ action: SelectionEditor.Action) {
         canvas?.commitText()
+        guard action != .scroll else {
+            let area = CaptureSelection(
+                displayID: selection.displayID, screenFrame: selection.screenFrame, target: .area(rect))
+            onFinish?(SelectionEditor.Choice(action: action, selection: area))
+            return
+        }
         onFinish?(SelectionEditor.Choice(action: action, selection: finalSelection, image: canvas?.result))
     }
 
@@ -276,7 +288,11 @@ final class SelectionEditorView: NSView {
         }
         return true
     }
+}
 
+// MARK: - Text editing keys
+
+extension SelectionEditorView {
     /// The standard text-editing action for a shortcut while typing, since the app has no Edit menu to supply them.
     private static func textEdit(for keyCode: Int, _ modifiers: NSEvent.ModifierFlags) -> Selector? {
         switch (keyCode, modifiers) {

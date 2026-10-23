@@ -33,6 +33,10 @@ extension AppDelegate {
             else {
                 return
             }
+            if choice.action == .scroll {
+                _ = await scroller.run(over: choice.selection)
+                return
+            }
             do {
                 let shot = try await Screenshotter.image(for: choice)
                 switch choice.action {
@@ -44,7 +48,7 @@ extension AppDelegate {
                 case .pin:
                     pins.pin(shot, over: PinBoard.frame(of: choice.selection))
                     playSound(.screenshot)
-                case .record:
+                case .record, .scroll:
                     break
                 }
             } catch let error as SCStreamError where error.code == .userDeclined {

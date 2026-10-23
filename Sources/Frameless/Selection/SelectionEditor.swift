@@ -8,6 +8,7 @@ final class SelectionEditor {
         case copy
         case save
         case pin
+        case scroll
         case record
     }
 
