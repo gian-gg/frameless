@@ -13,11 +13,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     let preferences = Preferences()
     private let recorder = Recorder()
-    private let selector = AreaSelector()
+    let selector = AreaSelector()
     private let outline = AreaOutline()
-    private let thumbnail = CaptureThumbnail()
+    let thumbnail = CaptureThumbnail()
     let pins = PinBoard()
-    private lazy var editor = SelectionEditor(preferences: preferences)
+    lazy var editor = SelectionEditor(preferences: preferences)
     let hotkeys = Hotkeys()
     let shortcutRecorder = ShortcutRecorder()
     private var recordingScreen: NSScreen?
@@ -296,63 +296,6 @@ extension AppDelegate {
         elapsedItem.attributedTitle = NSAttributedString(
             string: "Recording · " + RecordingFile.elapsed(Date.now.timeIntervalSince(start)),
             attributes: [.font: font, .foregroundColor: NSColor.secondaryLabelColor])
-    }
-}
-
-// MARK: - Screenshots
-
-extension AppDelegate {
-    /// Picks a display, area or window with the overlay, then captures it.
-    /// Saves a capture to the screenshots folder with the shutter sound and the thumbnail.
-    func saveScreenshot(_ shot: CapturedImage) throws {
-        let url = try Screenshotter.save(shot, in: saveFolder(for: .screenshot))
-        playSound(.screenshot)
-        thumbnail.show(url, on: NSScreen.screens.first { $0.displayID == shot.displayID })
-    }
-
-    @objc private func takeScreenshot() {
-        guard case .idle = state, hasScreenRecordingAccess() else { return }
-        state = .busy
-        Task {
-            defer { showIdle() }
-            guard let selection = await selector.select(for: .screenshot) else { return }
-            defer { selector.dismiss() }
-            guard
-                let choice = await editor.present(
-                    selection, for: .screenshot, onShown: { [selector] in selector.dismiss() })
-            else {
-                return
-            }
-            do {
-                let shot = try await Screenshotter.image(for: choice)
-                switch choice.action {
-                case .copy:
-                    Screenshotter.copy(shot)
-                    playSound(.screenshot)
-                case .save:
-                    try saveScreenshot(shot)
-                case .pin:
-                    pins.pin(shot, over: PinBoard.frame(of: choice.selection))
-                    playSound(.screenshot)
-                case .record:
-                    break
-                }
-            } catch let error as SCStreamError where error.code == .userDeclined {
-                selector.dismiss()
-                showPermissionAlert(.screenRecording)
-            } catch {
-                selector.dismiss()
-                showError("Couldn't take screenshot", error)
-            }
-        }
-    }
-
-    private func hasScreenRecordingAccess() -> Bool {
-        guard CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() else {
-            showPermissionAlert(.screenRecording)
-            return false
-        }
-        return true
     }
 }
 

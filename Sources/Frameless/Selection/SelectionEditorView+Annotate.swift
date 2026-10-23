@@ -10,12 +10,13 @@ extension SelectionEditorView {
         }
     }
 
-    private func showCanvas(for shot: CapturedImage) {
-        let canvas = AnnotationCanvas(shot: shot, frame: rect)
-        canvas.tool = tool
+    /// Lays the frozen screenshot under everything else: the whole screen cropped to the selection, or the window.
+    func addCanvas(for shot: CapturedImage) {
+        let canvas = AnnotationCanvas(shot: shot, frame: isWindow ? rect : bounds)
+        canvas.cropRect = isWindow ? canvas.bounds : rect
         canvas.color = markColor
         canvas.weight = markWeight
-        addSubview(canvas, positioned: .below, relativeTo: toolbar)
+        addSubview(canvas, positioned: .below, relativeTo: nil)
         self.canvas = canvas
     }
 
@@ -26,32 +27,12 @@ extension SelectionEditorView {
         return AnnotationTool.forKey(event.charactersIgnoringModifiers ?? "")
     }
 
-    /// Selects a tool, or none; the first tool picked freezes the selection.
+    /// Selects a tool, or none.
     func pick(_ tool: AnnotationTool?) {
         canvas?.commitText()
         self.tool = tool
         toolbar?.selectTool(tool.flatMap { AnnotationTool.allCases.firstIndex(of: $0) })
         canvas?.tool = tool
-        if tool != nil { freeze() }
-    }
-
-    /// Captures the selection once and lays the canvas over it in place of the live screen.
-    private func freeze() {
-        guard canvas == nil, !isFreezing else { return }
-        isFreezing = true
-        drag = nil
-        let selection = finalSelection
-        Task { [weak self] in
-            do {
-                let shot = try await Screenshotter.captureImage(selection)
-                self?.showCanvas(for: shot)
-            } catch {
-                NSSound.beep()
-                self?.pick(nil)
-            }
-            self?.isFreezing = false
-            self?.needsDisplay = true
-        }
     }
 }
 

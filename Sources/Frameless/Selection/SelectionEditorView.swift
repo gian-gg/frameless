@@ -1,7 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// The dimmed screen with the live selection, its size tag and the bar; resizes, moves, and handles the keys.
+/// The dimmed screen with the selection, its size tag and the bar; resizes, moves, and handles the keys.
 final class SelectionEditorView: NSView {
     private static let grabTolerance: CGFloat = 8
 
@@ -27,14 +27,17 @@ final class SelectionEditorView: NSView {
     let purpose: CapturePurpose
     private let scale: CGFloat
     /// The selection in this screen's local points; fixed for a window, editable otherwise.
-    var rect: CGRect
+    var rect: CGRect {
+        didSet {
+            if !isWindow { canvas?.cropRect = rect }
+        }
+    }
     var toolbar: GlassBar?
     private let sizeTag = GlassTag()
     var drag: Drag?
     var tool: AnnotationTool?
-    /// The capture taken when a tool is first picked, shown in place of the live screen from then on.
+    /// The frozen screenshot with its marks: the whole display, cropped to the selection, or just the window.
     var canvas: AnnotationCanvas?
-    var isFreezing = false
     /// The style whose row of choices is open, and that row.
     var openStyle: Style?
     var styleRow: SampleRow?
@@ -52,12 +55,13 @@ final class SelectionEditorView: NSView {
         let startRect: CGRect
     }
 
-    init(selection: CaptureSelection, purpose: CapturePurpose, scale: CGFloat) {
+    init(selection: CaptureSelection, purpose: CapturePurpose, frozen: CapturedImage?, scale: CGFloat) {
         self.selection = selection
         self.purpose = purpose
         self.scale = scale
         rect = Self.localRect(for: selection)
         super.init(frame: .zero)
+        if let frozen { addCanvas(for: frozen) }
         let toolbar = GlassBar(
             tools: purpose == .screenshot ? Self.tools : [], styles: purpose == .screenshot ? styleButtons() : [],
             items: barItems(),
@@ -77,14 +81,14 @@ final class SelectionEditorView: NSView {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    private var isWindow: Bool {
+    var isWindow: Bool {
         if case .window = selection.target { return true }
         return false
     }
 
-    /// Areas and displays can be resized and moved until the capture is frozen.
+    /// Areas and displays can be resized and moved; a window is fixed.
     private var isResizable: Bool {
-        !isWindow && canvas == nil && !isFreezing
+        !isWindow
     }
 
     private static func localRect(for selection: CaptureSelection) -> CGRect {
@@ -148,6 +152,7 @@ final class SelectionEditorView: NSView {
 
     override func layout() {
         super.layout()
+        canvas?.frame = isWindow ? rect : bounds
         if let toolbar {
             toolbar.setFrameOrigin(
                 ScreenGeometry.barOrigin(
@@ -183,14 +188,11 @@ final class SelectionEditorView: NSView {
     }
 
     override func mouseMoved(with event: NSEvent) {
-        if let canvas, canvas.frame.contains(convert(event.locationInWindow, from: nil)) {
-            if canvas.tool != nil {
-                NSCursor.crosshair.set()
-            } else if canvas.hasMark(atWindowPoint: event.locationInWindow) {
-                NSCursor.openHand.set()
-            } else {
-                NSCursor.arrow.set()
-            }
+        let point = convert(event.locationInWindow, from: nil)
+        if let canvas, canvas.tool != nil, rect.contains(point) {
+            NSCursor.crosshair.set()
+        } else if let canvas, canvas.tool == nil, canvas.hasMark(atWindowPoint: event.locationInWindow) {
+            NSCursor.openHand.set()
         } else {
             Self.cursor(for: handle(at: event)).set()
         }

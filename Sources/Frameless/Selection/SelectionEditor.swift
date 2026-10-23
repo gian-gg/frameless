@@ -1,7 +1,7 @@
 import AppKit
 
 /// After picking, keeps the selection on screen to resize or move until it's confirmed: Copy, Save or Pin for a
-/// screenshot, Record for a recording. Nothing is captured until then.
+/// screenshot, Record for a recording. Screenshots work on the screen as it was frozen when they started.
 @MainActor
 final class SelectionEditor {
     enum Action {
@@ -28,21 +28,25 @@ final class SelectionEditor {
 
     /// Shows the selection on its screen, calls `onShown` once it's up; returns the choice, or nil when closed.
     func present(
-        _ selection: CaptureSelection, for purpose: CapturePurpose, onShown: @MainActor () -> Void = {}
+        _ selection: CaptureSelection, for purpose: CapturePurpose, frozen: CapturedImage? = nil,
+        onShown: @MainActor () -> Void = {}
     ) async -> Choice? {
         guard continuation == nil,
             let screen = NSScreen.screens.first(where: { $0.displayID == selection.displayID })
         else { return nil }
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
-            show(selection, for: purpose, on: screen)
+            show(selection, for: purpose, frozen: frozen, on: screen)
             onShown()
         }
     }
 
-    private func show(_ selection: CaptureSelection, for purpose: CapturePurpose, on screen: NSScreen) {
+    private func show(
+        _ selection: CaptureSelection, for purpose: CapturePurpose, frozen: CapturedImage?, on screen: NSScreen
+    ) {
         let window = ScreenCoverWindow(screen: screen)
-        let view = SelectionEditorView(selection: selection, purpose: purpose, scale: screen.backingScaleFactor)
+        let view = SelectionEditorView(
+            selection: selection, purpose: purpose, frozen: frozen, scale: screen.backingScaleFactor)
         view.markColor = preferences.annotationColor
         view.onMarkColorChange = { [preferences] in preferences.annotationColor = $0 }
         view.markWeight = preferences.annotationWeight

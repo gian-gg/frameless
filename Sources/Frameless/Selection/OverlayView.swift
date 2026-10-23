@@ -1,15 +1,28 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// The picker's window on one screen.
+/// The picker's window on one screen, over the frozen screen once it's captured.
 final class OverlayWindow: ScreenCoverWindow {
     let overlay: OverlayView
+    private let frozen = NSView()
 
     init(screen: NSScreen, purpose: CapturePurpose) {
         overlay = OverlayView(scale: screen.backingScaleFactor, screenOrigin: screen.frame.origin, purpose: purpose)
         super.init(screen: screen)
-        contentView = overlay
+        let container = NSView(frame: CGRect(origin: .zero, size: screen.frame.size))
+        for view in [frozen, overlay] {
+            view.frame = container.bounds
+            view.autoresizingMask = [.width, .height]
+            container.addSubview(view)
+        }
+        frozen.wantsLayer = true
+        contentView = container
         makeFirstResponder(overlay)
+    }
+
+    /// Shows the frozen screen under the dim instead of the live one.
+    func showFrozen(_ image: CGImage) {
+        frozen.layer?.contents = image
     }
 }
 

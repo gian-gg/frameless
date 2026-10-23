@@ -35,11 +35,17 @@ enum CaptureSource {
     struct WindowCapture {
         let filter: SCContentFilter
         let rect: CGRect
+        let displayID: CGDirectDisplayID
     }
 
     /// Just the window, cut from the display it's mostly on, for still images: exact size, no shadow.
     static func windowOnDisplay(_ windowID: CGWindowID) async throws -> WindowCapture {
-        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        try windowOnDisplay(
+            windowID, in: try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true))
+    }
+
+    /// The same, from shareable content already fetched, so many windows can share one lookup.
+    static func windowOnDisplay(_ windowID: CGWindowID, in content: SCShareableContent) throws -> WindowCapture {
         guard let window = content.windows.first(where: { $0.windowID == windowID }) else {
             throw CaptureError.noWindow
         }
@@ -50,7 +56,7 @@ enum CaptureSource {
             throw CaptureError.noDisplay
         }
         return WindowCapture(
-            filter: SCContentFilter(display: display, including: [window]), rect: rect)
+            filter: SCContentFilter(display: display, including: [window]), rect: rect, displayID: display.displayID)
     }
 
     private static func overlapArea(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {

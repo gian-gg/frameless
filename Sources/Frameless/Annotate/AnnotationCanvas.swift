@@ -1,9 +1,13 @@
 import AppKit
 
-/// The frozen capture with its marks: tools draw them, with Shift squaring boxes and snapping lines to 45°, and with no
-/// tool picked marks can be selected, moved, restyled or deleted.
+/// The frozen capture with its marks, dimmed outside the part kept: tools draw marks, with Shift squaring boxes and
+/// snapping lines to 45°, and with no tool picked marks can be selected, moved, restyled or deleted.
 final class AnnotationCanvas: NSView {
     let shot: CapturedImage
+    /// The part of the capture that's kept, in canvas points.
+    var cropRect = CGRect.zero {
+        didSet { needsDisplay = true }
+    }
     var tool: AnnotationTool? {
         didSet {
             draft = nil
@@ -43,9 +47,10 @@ final class AnnotationCanvas: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { nil }
 
-    /// The capture with every mark drawn on, for copying, saving or pinning.
+    /// The kept part of the capture with every mark drawn on, for copying, saving or pinning.
     var result: CapturedImage? {
-        MarkRenderer.render(shot, marks: history.marks)
+        guard let full = MarkRenderer.render(shot, marks: history.marks) else { return nil }
+        return cropRect == bounds ? full : full.cropped(to: cropRect, of: bounds.size)
     }
 
     func add(_ mark: Mark) {
@@ -71,7 +76,23 @@ final class AnnotationCanvas: NSView {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         context.draw(shot.image, in: bounds)
         MarkRenderer.draw(shownMarks + [draft].compactMap { $0 }, in: context, over: shot.image, size: bounds.size)
+        if cropRect != bounds {
+            context.addRect(bounds)
+            context.addRect(cropRect)
+            context.setFillColor(CGColor(gray: 0, alpha: Config.Style.dimOpacity))
+            context.fillPath(using: .evenOdd)
+        }
+        Panel.drawSelectionFrame(cropRect)
         drawSelection(in: context)
+    }
+
+    /// Takes clicks only where they draw or grab a mark, leaving the rest to the editor's resizing.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard let hit = super.hitTest(point) else { return nil }
+        guard hit === self else { return hit }
+        let local = convert(point, from: superview)
+        if tool != nil { return cropRect.contains(local) ? self : nil }
+        return MarkGeometry.index(at: local, in: history.marks) != nil ? self : nil
     }
 
     // MARK: - Drawing marks
@@ -105,8 +126,8 @@ final class AnnotationCanvas: NSView {
         if event.modifierFlags.contains(.shift) {
             switch mark.tool {
             case .rectangle, .highlight, .pixelate:
-                point = ScreenGeometry.squareCorner(from: start, to: point, in: bounds)
-            case .line, .arrow: point = ScreenGeometry.snappedEnd(from: start, to: point, in: bounds)
+                point = ScreenGeometry.squareCorner(from: start, to: point, in: cropRect)
+            case .line, .arrow: point = ScreenGeometry.snappedEnd(from: start, to: point, in: cropRect)
             default: break
             }
         }
@@ -124,9 +145,10 @@ final class AnnotationCanvas: NSView {
         add(mark)
     }
 
-    /// Where the pointer is, in canvas points, kept inside the canvas.
+    /// Where the pointer is, in canvas points, kept inside the part that's kept.
     private func location(of event: NSEvent) -> CGPoint {
         let point = convert(event.locationInWindow, from: nil)
-        return CGPoint(x: min(max(point.x, 0), bounds.width), y: min(max(point.y, 0), bounds.height))
+        return CGPoint(
+            x: min(max(point.x, cropRect.minX), cropRect.maxX), y: min(max(point.y, cropRect.minY), cropRect.maxY))
     }
 }

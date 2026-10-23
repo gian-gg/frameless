@@ -1,4 +1,4 @@
-import CoreGraphics
+import AppKit
 import Foundation
 import ImageIO
 import Testing
@@ -42,5 +42,25 @@ struct ScreenshotterTests {
         #expect(url.deletingLastPathComponent().standardizedFileURL == folder.standardizedFileURL)
         #expect(url.pathExtension == "png")
         #expect(FileManager.default.fileExists(atPath: url.path(percentEncoded: false)))
+    }
+
+    @Test("cropping keeps the points asked for, at full pixel resolution")
+    func cropsInPoints() throws {
+        let context = try #require(
+            CGContext(
+                data: nil, width: 40, height: 20, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.setFillColor(red: 1, green: 0, blue: 0, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: 20, height: 20))
+        context.setFillColor(red: 0, green: 0, blue: 1, alpha: 1)
+        context.fill(CGRect(x: 20, y: 0, width: 20, height: 20))
+        let shot = CapturedImage(image: try #require(context.makeImage()), scale: 2, displayID: 1)
+
+        let crop = try #require(
+            shot.cropped(to: CGRect(x: 10, y: 0, width: 10, height: 5), of: CGSize(width: 20, height: 10)))
+
+        #expect(crop.image.width == 20 && crop.image.height == 10)
+        let color = try #require(NSBitmapImageRep(cgImage: crop.image).colorAt(x: 10, y: 5))
+        #expect(color.blueComponent > 0.9 && color.redComponent < 0.1)
     }
 }

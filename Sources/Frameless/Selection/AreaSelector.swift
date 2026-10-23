@@ -27,17 +27,19 @@ final class AreaSelector {
     private var mode = OverlayView.Mode.screen
     private var continuation: CheckedContinuation<CaptureSelection?, Never>?
 
-    /// Shows the overlay on every display; nil when cancelled.
-    func select(for purpose: CapturePurpose) async -> CaptureSelection? {
+    /// Shows the overlay on every display, over the frozen screens when given; nil when cancelled.
+    func select(
+        for purpose: CapturePurpose, windowList: WindowList = .snapshot(), frozen: FrozenScreens? = nil
+    ) async -> CaptureSelection? {
         guard continuation == nil else { return nil }
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
-            showOverlays(for: purpose)
+            showOverlays(for: purpose, windowList: windowList, frozen: frozen)
         }
     }
 
-    private func showOverlays(for purpose: CapturePurpose) {
-        windowList = WindowList.snapshot()
+    private func showOverlays(for purpose: CapturePurpose, windowList: WindowList, frozen: FrozenScreens?) {
+        self.windowList = windowList
         mode = .screen
         windows = NSScreen.screens.compactMap { screen in
             guard let displayID = screen.displayID else { return nil }
@@ -49,6 +51,11 @@ final class AreaSelector {
             window.overlay.onCancel = { [weak self] in self?.finish(nil) }
             window.overlay.onToggleMode = { [weak self] in self?.toggleMode() }
             window.overlay.onMouseMoved = { [weak self] in self?.updateHighlightedWindow() }
+            if let frozen {
+                Task { [weak window] in
+                    if let shot = await frozen.display(displayID) { window?.showFrozen(shot.image) }
+                }
+            }
             return window
         }
         guard !windows.isEmpty else { return finish(nil) }
