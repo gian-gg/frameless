@@ -22,7 +22,10 @@ final class BarButton: NSControl {
     }
     private let title: String?
     private let shortcut: Shortcut?
-    private let tipText: String?
+    /// The hover tooltip, which for a disabled item says why.
+    var tipText: String? {
+        didSet { setAccessibilityHelp(tipText) }
+    }
     private let tip = HoverTip()
     private var isHovering = false {
         didSet { needsDisplay = true }
@@ -66,6 +69,11 @@ final class BarButton: NSControl {
     /// Called as the pointer enters and leaves.
     var onHover: (@MainActor (Bool) -> Void)?
 
+    /// Dimmed and unclickable, though its tooltip still shows.
+    override var isEnabled: Bool {
+        didSet { needsDisplay = true }
+    }
+
     /// Shown with a brighter pill and a full-strength icon, for the active tool.
     var isSelected = false {
         didSet { needsDisplay = true }
@@ -81,7 +89,13 @@ final class BarButton: NSControl {
 
     private var iconImage: NSImage {
         let color: NSColor =
-            isToggle && !isSelected ? .labelColor.withAlphaComponent(Config.Bar.unselectedToolOpacity) : .labelColor
+            if !isEnabled {
+                .labelColor.withAlphaComponent(Config.Bar.disabledOpacity)
+            } else if isToggle && !isSelected {
+                .labelColor.withAlphaComponent(Config.Bar.unselectedToolOpacity)
+            } else {
+                .labelColor
+            }
         if let sample { return Self.sampleImage(sample) }
         return icon?.image(size: Config.Bar.iconSize, color: color) ?? NSImage()
     }
@@ -165,7 +179,7 @@ final class BarButton: NSControl {
 
     override func draw(_ dirtyRect: NSRect) {
         let showsSelection = isSelected && drawsSelection
-        if isInteractive, isPressed || showsSelection || (isHovering && drawsHover) {
+        if isInteractive, isEnabled, isPressed || showsSelection || (isHovering && drawsHover) {
             let opacity = showsSelection ? Config.Bar.selectedFillOpacity : isPressed ? 0.22 : 0.1
             NSColor.labelColor.withAlphaComponent(opacity).setFill()
             let radius = min(bounds.width, bounds.height) / 2
@@ -222,15 +236,18 @@ final class BarButton: NSControl {
     }
 
     override func mouseDown(with event: NSEvent) {
+        guard isEnabled else { return }
         isPressed = true
         tip.hide()
     }
 
     override func mouseDragged(with event: NSEvent) {
+        guard isEnabled else { return }
         isPressed = bounds.contains(convert(event.locationInWindow, from: nil))
     }
 
     override func mouseUp(with event: NSEvent) {
+        guard isEnabled else { return }
         let inside = bounds.contains(convert(event.locationInWindow, from: nil))
         isPressed = false
         if inside { sendAction(action, to: target) }

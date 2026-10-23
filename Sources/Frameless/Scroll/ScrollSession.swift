@@ -9,18 +9,18 @@ final class ScrollSession {
     private let preview = ScrollPreview()
     private var panel: ScrollBarPanel?
     private var capture: ScrollCapture?
-    private var stitcher = Stitcher()
     private var continuation: CheckedContinuation<Bool, Never>?
 
     /// Runs until Done or Return, giving the stitched image, or Cancel or Esc, giving nil.
     func run(over selection: CaptureSelection) async -> CapturedImage? {
         guard continuation == nil, let area = selection.area else { return nil }
-        stitcher = Stitcher()
+        let stitching = ScrollStitching()
         let globalArea = area.offsetBy(dx: selection.screenFrame.minX, dy: selection.screenFrame.minY)
         outline.show(selection)
         preview.show(beside: globalArea, on: selection.screenFrame)
         let capture = ScrollCapture { [weak self] frame in
-            Task { @MainActor in self?.received(frame) }
+            guard let update = stitching.add(frame) else { return }
+            Task { @MainActor in self?.show(update) }
         }
         self.capture = capture
         let scale: CGFloat
@@ -36,20 +36,14 @@ final class ScrollSession {
         }
         await capture.stop()
         end()
-        guard isDone, let image = stitcher.image() else { return nil }
+        guard isDone, let image = stitching.image() else { return nil }
         return CapturedImage(image: image, scale: scale, displayID: selection.displayID)
     }
 
-    /// Stitches a new frame in as it arrives, until the image reaches its height limit.
-    private func received(_ frame: Stitcher.Frame) {
-        guard stitcher.height < Config.Scroll.maxHeight else { return }
-        switch stitcher.add(frame) {
-        case .started, .added:
-            if let image = stitcher.image() { preview.update(image) }
-        case .lost:
-            preview.showHint("Scroll back a little")
-        case .unchanged:
-            break
+    private func show(_ update: ScrollStitching.Update) {
+        switch update {
+        case .image(let image): preview.update(image)
+        case .lost: preview.showHint("Scroll back a little")
         }
     }
 

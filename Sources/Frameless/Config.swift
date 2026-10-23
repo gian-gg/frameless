@@ -102,6 +102,9 @@ enum Config {
         static let minimumMovingShare = 3
         /// The tallest a stitched image may grow, in pixels.
         static let maxHeight = 20_000
+        /// The live preview's pixel width and how often it's redrawn.
+        static let previewPixels = 280
+        static let previewInterval: TimeInterval = 0.1
         /// The live preview beside the area: its width and gap.
         static let previewWidth: CGFloat = 140
         static let previewGap: CGFloat = 12
@@ -168,6 +171,7 @@ enum Config {
         static let styleRowGap: CGFloat = 8
         /// Tool icons are dimmed to this until selected; the selected one sits on this brighter pill.
         static let unselectedToolOpacity: CGFloat = 0.7
+        static let disabledOpacity: CGFloat = 0.3
         static let selectedFillOpacity: CGFloat = 0.3
         static let titleSize: CGFloat = 12
         static let shortcutSize: CGFloat = 11

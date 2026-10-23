@@ -30,6 +30,7 @@ final class SelectionEditorView: NSView {
     var rect: CGRect {
         didSet {
             if !isWindow { canvas?.cropRect = rect }
+            updateScrollItem()
         }
     }
     var toolbar: GlassBar?
@@ -70,6 +71,7 @@ final class SelectionEditorView: NSView {
         toolbar.onSelectTool = { [weak self] index in self?.pick(index.map { AnnotationTool.allCases[$0] }) }
         addSubview(toolbar)
         self.toolbar = toolbar
+        updateScrollItem()
         addSubview(sizeTag)
         updateTag()
     }
@@ -148,6 +150,7 @@ final class SelectionEditorView: NSView {
     private func choose(_ action: SelectionEditor.Action) {
         canvas?.commitText()
         guard action != .scroll else {
+            guard canScroll else { return }
             let area = CaptureSelection(
                 displayID: selection.displayID, screenFrame: selection.screenFrame, target: .area(rect))
             onFinish?(SelectionEditor.Choice(action: action, selection: area))
@@ -288,6 +291,27 @@ final class SelectionEditorView: NSView {
         default: return super.performKeyEquivalent(with: event)
         }
         return true
+    }
+}
+
+// MARK: - Scroll
+
+extension SelectionEditorView {
+    /// Where the scroll item sits in the bar.
+    private static let scrollItemIndex = 3
+
+    /// Scrolling follows an area or a window, but not the whole screen.
+    private var canScroll: Bool {
+        isWindow || rect != CGRect(origin: .zero, size: selection.screenFrame.size)
+    }
+
+    private func updateScrollItem() {
+        guard purpose == .screenshot else { return }
+        toolbar?.setItem(
+            at: Self.scrollItemIndex, enabled: canScroll,
+            toolTip: canScroll
+                ? "Scrolling screenshot"
+                : "Scrolling screenshots need an area or a window; resize the selection to use one")
     }
 }
 

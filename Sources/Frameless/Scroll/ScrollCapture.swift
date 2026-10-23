@@ -1,7 +1,7 @@
 import CoreMedia
 import ScreenCaptureKit
 
-/// Streams frames of an area while it's scrolled, each as rows of RGBA bytes for the stitcher.
+/// Streams frames of an area while it's scrolled, each as rows of BGRA bytes for the stitcher.
 final class ScrollCapture: NSObject, SCStreamOutput {
     private var stream: SCStream?
     private let queue = DispatchQueue(label: "Frameless.ScrollCapture")
@@ -53,7 +53,7 @@ final class ScrollCapture: NSObject, SCStreamOutput {
         return status == .complete
     }
 
-    /// The buffer's pixels as RGBA rows, top row first.
+    /// The buffer's pixels as BGRA rows, top row first.
     private static func frame(from sampleBuffer: CMSampleBuffer) -> Stitcher.Frame? {
         guard let buffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return nil }
         CVPixelBufferLockBaseAddress(buffer, .readOnly)
@@ -62,12 +62,8 @@ final class ScrollCapture: NSObject, SCStreamOutput {
         let width = CVPixelBufferGetWidth(buffer)
         let height = CVPixelBufferGetHeight(buffer)
         let bytesPerRow = CVPixelBufferGetBytesPerRow(buffer)
-        let rows = (0..<height).map { row -> [UInt8] in
-            let bgra = UnsafeBufferPointer(
-                start: base.advanced(by: row * bytesPerRow).assumingMemoryBound(to: UInt8.self), count: width * 4)
-            var rgba = [UInt8](bgra)
-            for pixel in stride(from: 0, to: rgba.count, by: 4) { rgba.swapAt(pixel, pixel + 2) }
-            return rgba
+        let rows = (0..<height).map { row in
+            [UInt8](UnsafeRawBufferPointer(start: base.advanced(by: row * bytesPerRow), count: width * 4))
         }
         return Stitcher.Frame(width: width, rows: rows)
     }

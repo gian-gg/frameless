@@ -4,52 +4,6 @@ import Foundation
 /// Builds one tall image from frames of a scrolling area: each frame adds the rows it scrolled into view, and rows
 /// that stay put between frames, such as a sticky header or footer, are kept once.
 struct Stitcher {
-    /// One captured frame: rows of RGBA bytes, top row first, all the same width, each split into strips across.
-    struct Frame {
-        let width: Int
-        let rows: [[UInt8]]
-        let fingerprints: [UInt64]
-        /// A fingerprint per strip, row by row, and whether that strip has more than one colour.
-        let cells: [UInt64]
-        let hasDetail: [Bool]
-        let strips: Int
-
-        init(width: Int, rows: [[UInt8]]) {
-            self.width = width
-            self.rows = rows
-            let strips = max(1, min(Config.Scroll.strips, width))
-            self.strips = strips
-            let bounds = (0...strips).map { $0 * width / strips * 4 }
-            var cells: [UInt64] = []
-            var hasDetail: [Bool] = []
-            cells.reserveCapacity(rows.count * strips)
-            hasDetail.reserveCapacity(rows.count * strips)
-            for row in rows {
-                for strip in 0..<strips {
-                    let pixels = row[bounds[strip]..<bounds[strip + 1]]
-                    cells.append(Self.fingerprint(pixels))
-                    hasDetail.append(Self.hasDetail(pixels))
-                }
-            }
-            self.cells = cells
-            self.hasDetail = hasDetail
-            fingerprints = (0..<rows.count).map { row in
-                cells[row * strips..<(row + 1) * strips].reduce(0) { ($0 ^ $1) &* 1_099_511_628_211 }
-            }
-        }
-
-        private static func fingerprint<Bytes: Collection<UInt8>>(_ bytes: Bytes) -> UInt64 {
-            bytes.reduce(14_695_981_039_346_656_037) { ($0 ^ UInt64($1)) &* 1_099_511_628_211 }
-        }
-
-        private static func hasDetail(_ pixels: ArraySlice<UInt8>) -> Bool {
-            let start = pixels.startIndex
-            guard pixels.count >= 8 else { return false }
-            let first = pixels[start..<start + 4]
-            return stride(from: start + 4, to: pixels.endIndex, by: 4).contains { pixels[$0..<$0 + 4] != first }
-        }
-    }
-
     /// What a frame did to the image.
     enum Change: Equatable {
         case started
@@ -92,15 +46,42 @@ struct Stitcher {
 
     /// The stitched image, top row first.
     func image() -> CGImage? {
-        let rows = header + body + footer
-        guard width > 0, !rows.isEmpty,
-            let provider = CGDataProvider(data: Data(rows.joined()) as CFData)
-        else { return nil }
+        var bytes = Data(capacity: height * width * 4)
+        for rows in [header, body, footer] {
+            for row in rows { bytes.append(contentsOf: row) }
+        }
+        return Self.makeImage(width: width, height: height, bytes: bytes)
+    }
+
+    /// A small copy of the stitched image about `targetWidth` pixels wide, sampling every few pixels, for showing
+    /// while it grows.
+    func preview(width targetWidth: Int) -> CGImage? {
+        let step = max(1, width / max(1, targetWidth))
+        let columns = width / step
+        let rows = stride(from: 0, to: height, by: step)
+        var bytes = Data(capacity: rows.underestimatedCount * columns * 4)
+        for index in rows {
+            let row = self.row(at: index)
+            for column in 0..<columns { bytes.append(contentsOf: row[column * step * 4..<column * step * 4 + 4]) }
+        }
+        return Self.makeImage(width: columns, height: bytes.count / max(1, columns * 4), bytes: bytes)
+    }
+
+    private func row(at index: Int) -> [UInt8] {
+        if index < header.count { return header[index] }
+        if index < header.count + body.count { return body[index - header.count] }
+        return footer[index - header.count - body.count]
+    }
+
+    /// An image from BGRA rows, as the screen hands them over.
+    private static func makeImage(width: Int, height: Int, bytes: Data) -> CGImage? {
+        guard width > 0, height > 0, let provider = CGDataProvider(data: bytes as CFData) else { return nil }
         return CGImage(
-            width: width, height: rows.count, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4,
+            width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4,
             space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue), provider: provider,
-            decode: nil, shouldInterpolate: false, intent: .defaultIntent)
+            bitmapInfo: CGBitmapInfo(
+                rawValue: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue),
+            provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
     }
 
     private mutating func start(with frame: Frame) {

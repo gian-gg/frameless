@@ -29,6 +29,7 @@ final class GlassBar: NSView {
 
     private var handlers: [@MainActor () -> Void] = []
     private var toolButtons: [BarButton] = []
+    private var itemButtons: [BarButton] = []
     private var toolLens: GlassLens?
     private var styleButtons: [BarButton] = []
     private var selectedTool: Int?
@@ -59,6 +60,7 @@ final class GlassBar: NSView {
             let width = view.intrinsicContentSize.width
             view.frame = CGRect(x: left, y: Config.Bar.padding, width: width, height: Config.Bar.itemHeight)
             capsule.content.addSubview(view)
+            itemButtons.append(view)
             left += width
         }
         capsule.frame = CGRect(x: capsuleLeft, y: 0, width: left + Config.Bar.padding, height: height)
@@ -95,6 +97,13 @@ final class GlassBar: NSView {
         button.target = self
         button.action = #selector(pressed(_:))
         return button
+    }
+
+    /// Enables or disables an item, with a tooltip to match.
+    func setItem(at index: Int, enabled: Bool, toolTip: String) {
+        guard itemButtons.indices.contains(index) else { return }
+        itemButtons[index].isEnabled = enabled
+        itemButtons[index].tipText = toolTip
     }
 
     /// Shows a new sample in a style button.
