@@ -12,11 +12,19 @@ final class PinBoard {
 
     var hasPins: Bool { !panels.isEmpty }
 
-    /// Floats the capture centred over `frame`, in global AppKit points, at its on-screen size.
+    /// Floats the capture centred over `frame`, in global AppKit points, at its on-screen size, shrunk and moved to
+    /// fit its screen when it's taller, such as a scrolling screenshot.
     func pin(_ shot: CapturedImage, over frame: CGRect) {
-        let size = CGSize(
+        var size = CGSize(
             width: CGFloat(shot.image.width) / shot.scale, height: CGFloat(shot.image.height) / shot.scale)
-        let origin = CGPoint(x: frame.midX - size.width / 2, y: frame.midY - size.height / 2)
+        var origin = CGPoint(x: frame.midX - size.width / 2, y: frame.midY - size.height / 2)
+        if let screen = NSScreen.screens.first(where: { $0.frame.intersects(frame) })?.visibleFrame {
+            let fit = min(1, screen.width / size.width, screen.height / size.height)
+            size = CGSize(width: (size.width * fit).rounded(), height: (size.height * fit).rounded())
+            origin = CGPoint(
+                x: min(max(frame.midX - size.width / 2, screen.minX), screen.maxX - size.width),
+                y: min(max(frame.midY - size.height / 2, screen.minY), screen.maxY - size.height))
+        }
         let panel = PinPanel(shot: shot, frame: CGRect(origin: origin, size: size))
         panel.onClose = { [weak self, weak panel] in
             guard let panel else { return }

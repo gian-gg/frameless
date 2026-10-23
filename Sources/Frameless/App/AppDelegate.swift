@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let thumbnail = CaptureThumbnail()
     let pins = PinBoard()
     let scroller = ScrollSession()
+    let scrollResult = ScrollResult()
     lazy var editor = SelectionEditor(preferences: preferences)
     let hotkeys = Hotkeys()
     let shortcutRecorder = ShortcutRecorder()

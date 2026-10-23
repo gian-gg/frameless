@@ -108,6 +108,9 @@ enum Config {
         /// The live preview beside the area: its width and gap.
         static let previewWidth: CGFloat = 140
         static let previewGap: CGFloat = 12
+        /// The finished image's card: its widest, and the share of the screen's height it may take with its bar.
+        static let resultWidth: CGFloat = 960
+        static let resultHeightShare: CGFloat = 0.9
     }
 
     /// Screenshots pinned on screen.

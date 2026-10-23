@@ -58,11 +58,25 @@ extension AppDelegate {
         }
     }
 
-    /// Stitches a scrolling screenshot of the area and copies it.
+    /// Stitches a scrolling screenshot of the area, then copies, saves or pins it as picked in the result.
     private func scrollCapture(_ selection: CaptureSelection) async {
-        guard let tall = await scroller.run(over: selection) else { return }
-        Screenshotter.copy(tall)
-        playSound(.screenshot)
+        guard let tall = await scroller.run(over: selection),
+            let action = await scrollResult.present(tall, on: selection.screenFrame)
+        else { return }
+        switch action {
+        case .copy:
+            Screenshotter.copy(tall)
+            playSound(.screenshot)
+        case .save:
+            do {
+                try saveScreenshot(tall)
+            } catch {
+                showError("Couldn't save screenshot", error)
+            }
+        case .pin:
+            pins.pin(tall, over: PinBoard.frame(of: selection))
+            playSound(.screenshot)
+        }
     }
 
     func hasScreenRecordingAccess() -> Bool {
