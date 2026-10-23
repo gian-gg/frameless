@@ -13,6 +13,7 @@ class ScreenCoverWindow: NSPanel {
         hasShadow = false
         ignoresMouseEvents = false
         isReleasedWhenClosed = false
+        sharingType = .none
         animationBehavior = .none
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
     }
