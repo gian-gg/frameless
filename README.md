@@ -4,7 +4,8 @@
 
 Screenshots, annotations and screen recordings for macOS, built light and native.
 
-Pick a display, an area or a window, mark it up, then copy, save, pin or record it.
+Pick a display, an area or a window, mark it up, then copy, save, pin or record it. Scroll through a long page to
+capture it as one tall image.
 
 Capture and encoding are done by macOS itself, and Frameless uses no CPU while idle. Start from the menu bar or a
 shortcut. Requires macOS 15 or later.
@@ -29,6 +30,14 @@ shortcut. Requires macOS 15 or later.
 - **Style:** six colours and three thicknesses, remembered between screenshots
 - **Edit:** select a mark to move, restyle or delete it; undo and redo everything
 - **Keyboard-friendly:** every tool has a one-key shortcut, shown in its tooltip
+
+### Scroll
+
+- **Scrolling screenshots:** pick an area or a window, press <kbd>⌘L</kbd>, then scroll as usual
+- **Live preview:** the stitched image grows beside the area as you go
+- **Keeps up with the page:** sticky headers are kept once, and a playing video or a loading image rarely throws it off
+- **Your choice of output:** copy, save or pin the result once you're done
+- **Best fit:** drag over just the part that scrolls, since anything still inside the area repeats
 
 ### Pin
 
