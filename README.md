@@ -80,7 +80,8 @@ shortcut.
 
 1. Download `Frameless.dmg` from the [latest release](https://github.com/gian-gg/frameless/releases/latest).
 2. Open it and drag **Frameless** into **Applications**.
-3. The first time, right-click **Frameless** in Applications and choose **Open**, since the app isn't notarised.
+3. Open **Frameless**. The app isn't notarised, so the first time macOS says it can't check it: open **System Settings →
+   Privacy & Security**, scroll down and click **Open Anyway**.
 4. Allow **Screen Recording** when asked, and **Microphone** if you want to record your voice.
 
 Requires macOS 15 or later.

@@ -1,4 +1,5 @@
 APP := build/Frameless.app
+DMG := build/Frameless.dmg
 ICON := build/AppIcon.icns
 ICONSET := build/AppIcon.iconset
 SOURCES := Package.swift Sources Tests
@@ -12,7 +13,7 @@ TEST_FLAGS := -Xswiftc -F -Xswiftc $(TESTING_FW) -Xlinker -rpath -Xlinker $(TEST
 	-Xswiftc -Xfrontend -Xswiftc -disable-cross-import-overlays
 endif
 
-.PHONY: build app run clean format lint typecheck test check hooks
+.PHONY: build app dmg run clean format lint typecheck test check hooks
 
 build:
 	swift build -c release
@@ -33,6 +34,15 @@ app: build $(ICON)
 	cp Resources/Info.plist $(APP)/Contents/
 	cp $(ICON) $(APP)/Contents/Resources/
 	codesign --force --options runtime --entitlements Resources/Frameless.entitlements --sign "$(SIGN_ID)" $(APP)
+
+# Disk image with the app and a shortcut to Applications, for releases
+dmg: app
+	rm -rf build/dmg $(DMG)
+	mkdir -p build/dmg
+	cp -R $(APP) build/dmg/
+	ln -s /Applications build/dmg/Applications
+	hdiutil create -volname Frameless -srcfolder build/dmg -fs HFS+ -format UDZO -ov $(DMG)
+	rm -rf build/dmg
 
 run: app
 	open $(APP)
