@@ -75,6 +75,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         menu.addItem(withTitle: "Preferences", action: nil, keyEquivalent: "").submenu = makePreferencesMenu()
         menu.addItem(updateItem())
+        let repository = menu.addItem(
+            withTitle: "View on GitHub", action: #selector(openRepository), keyEquivalent: "")
+        repository.target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Frameless", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         return menu

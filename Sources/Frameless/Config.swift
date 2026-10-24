@@ -220,6 +220,7 @@ enum Config {
 
     /// System Settings deep links.
     enum Links {
+        static let repository = URL(string: "https://github.com/gian-gg/frameless")
         static let screenRecordingSettings = URL(
             string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
         static let microphoneSettings = URL(

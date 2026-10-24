@@ -1,6 +1,6 @@
 import AppKit
 
-/// Update checks: a daily quiet check, a manual one from the menu, and opening a newer release's page.
+/// Update checks: a daily quiet check, a manual one from the menu, opening a newer release's page, and the repository.
 extension AppDelegate {
     func setUpUpdates() {
         updates.onChange = { [weak self] in self?.refreshMenu() }
@@ -37,6 +37,11 @@ extension AppDelegate {
     @objc func openRelease() {
         guard let page = updates.available?.page else { return }
         NSWorkspace.shared.open(page)
+    }
+
+    @objc func openRepository() {
+        guard let url = Config.Links.repository else { return }
+        NSWorkspace.shared.open(url)
     }
 
     @objc func toggleUpdateChecks(_ sender: NSMenuItem) {
