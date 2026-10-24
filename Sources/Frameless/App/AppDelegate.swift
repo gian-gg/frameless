@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let pins = PinBoard()
     let scroller = ScrollSession()
     let scrollResult = ScrollResult()
+    let updates = UpdateChecker()
     lazy var editor = SelectionEditor(preferences: preferences)
     let hotkeys = Hotkeys()
     let shortcutRecorder = ShortcutRecorder()
@@ -37,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         recorder.onEndedEarly = { [weak self] end in self?.recordingEndedEarly(end) }
         hotkeys.onPress = { [weak self] action in self?.hotkeyPressed(action) }
         setUpPins()
+        setUpUpdates()
         let unavailable = registerShortcuts()
         showIdle()
         reportUnavailableShortcuts(unavailable)
@@ -72,6 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         menu.addItem(.separator())
         menu.addItem(withTitle: "Preferences", action: nil, keyEquivalent: "").submenu = makePreferencesMenu()
+        menu.addItem(updateItem())
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Frameless", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         return menu
@@ -103,6 +106,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(toggleItem("Play Sounds", \.playsSounds))
         menu.addItem(withTitle: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
             .target = self
+        menu.addItem(
+            toggleItem("Check for Updates Daily", \.checksForUpdates, action: #selector(toggleUpdateChecks(_:))))
         return menu
     }
 

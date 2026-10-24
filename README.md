@@ -75,6 +75,7 @@ shortcut.
 - **Save folders:** choose where screenshots and recordings go
 - **Feedback:** macOS capture sounds and a floating thumbnail; click to open, drag to share
 - **Liquid Glass:** on macOS 26, with frosted glass on earlier versions
+- **Updates:** looks for a newer release on GitHub once a day, and nowhere else; turn it off in Preferences
 
 ## Install
 

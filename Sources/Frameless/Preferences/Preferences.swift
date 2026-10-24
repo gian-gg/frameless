@@ -11,6 +11,7 @@ final class Preferences {
         static let frameRate = "frameRate"
         static let resolution = "resolution"
         static let playsSounds = "playsSounds"
+        static let checksForUpdates = "checksForUpdates"
         static let annotationColor = "annotationColor"
         static let annotationWeight = "annotationWeight"
         static func shortcut(_ action: Hotkeys.Action) -> String { "shortcut.\(action)" }
@@ -29,6 +30,7 @@ final class Preferences {
             Key.frameRate: Config.Recording.frameRate.rawValue,
             Key.resolution: Config.Recording.resolution.rawValue,
             Key.playsSounds: Config.Feedback.playsSounds,
+            Key.checksForUpdates: Config.Updates.checksAutomatically,
         ])
     }
 
@@ -69,6 +71,12 @@ final class Preferences {
     var playsSounds: Bool {
         get { defaults.bool(forKey: Key.playsSounds) }
         set { defaults.set(newValue, forKey: Key.playsSounds) }
+    }
+
+    /// Whether to look for a newer release at launch and once a day.
+    var checksForUpdates: Bool {
+        get { defaults.bool(forKey: Key.checksForUpdates) }
+        set { defaults.set(newValue, forKey: Key.checksForUpdates) }
     }
 
     /// The colour new marks are drawn in.

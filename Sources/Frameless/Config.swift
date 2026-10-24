@@ -204,6 +204,13 @@ enum Config {
         static let dimOpacity: CGFloat = 0.2
     }
 
+    /// Looking for newer releases on GitHub.
+    enum Updates {
+        static let latestRelease = "https://api.github.com/repos/gian-gg/frameless/releases/latest"
+        static let interval: TimeInterval = 24 * 60 * 60
+        static let checksAutomatically = true
+    }
+
     /// Menu bar item.
     enum StatusItem {
         static let symbolName = "record.circle"
