@@ -20,4 +20,18 @@ struct RecordingFileTests {
     func elapsedLabel(seconds: TimeInterval, label: String) {
         #expect(RecordingFile.elapsed(seconds) == label)
     }
+
+    @Test("a missing file isn't playable")
+    func missingFileIsNotPlayable() async {
+        let url = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).mp4")
+        #expect(await !RecordingFile.isPlayable(url))
+    }
+
+    @Test("a file with no readable video isn't playable")
+    func unreadableFileIsNotPlayable() async throws {
+        let url = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).mp4")
+        try Data(repeating: 0, count: 4096).write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        #expect(await !RecordingFile.isPlayable(url))
+    }
 }

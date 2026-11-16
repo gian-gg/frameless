@@ -104,13 +104,12 @@ final class Recorder: NSObject {
                 try await waitForFinish()
                 onEndedEarly?(.saved(url))
             } catch {
-                try? FileManager.default.removeItem(at: url)
-                onEndedEarly?(.failed(error))
+                onEndedEarly?(await keepIfPlayable(url, failedWith: error))
             }
         }
     }
 
-    /// The file couldn't be written: stop capturing and drop the partial file.
+    /// The file couldn't be written: stop capturing and keep the partial file if it plays.
     private func outputFailed(_ error: Error) {
         guard case .recording(let stream, let url) = state else {
             finished.finish(.failure(error))
@@ -120,9 +119,15 @@ final class Recorder: NSObject {
         Task {
             defer { state = .idle }
             try? await stream.stopCapture()
-            try? FileManager.default.removeItem(at: url)
-            onEndedEarly?(.failed(error))
+            onEndedEarly?(await keepIfPlayable(url, failedWith: error))
         }
+    }
+
+    /// Keeps a recording that failed to finish if what was written still plays, otherwise deletes it.
+    private func keepIfPlayable(_ url: URL, failedWith error: Error) async -> EarlyEnd {
+        if await RecordingFile.isPlayable(url) { return .saved(url) }
+        try? FileManager.default.removeItem(at: url)
+        return .failed(error)
     }
 }
 
