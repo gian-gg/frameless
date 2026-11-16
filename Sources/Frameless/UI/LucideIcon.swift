@@ -28,6 +28,7 @@ enum LucideIcon: CaseIterable {
     case triangleAlert
     case play
     case check
+    case circleStop
     case chevronsDown
 
     @MainActor private static var cache: [LucideIcon: NSImage] = [:]
@@ -117,6 +118,7 @@ enum LucideIcon: CaseIterable {
         ],
         .play: [#"<polygon points="6 3 20 12 6 21 6 3"/>"#],
         .check: [#"<path d="M20 6 9 17l-5-5"/>"#],
+        .circleStop: [#"<circle cx="12" cy="12" r="10"/>"#, #"<rect x="9" y="9" width="6" height="6" rx="1"/>"#],
         .chevronsDown: [#"<path d="m7 6 5 5 5-5"/>"#, #"<path d="m7 13 5 5 5-5"/>"#],
     ]
 }

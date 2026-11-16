@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let recorder = Recorder()
     let selector = AreaSelector()
     private let outline = AreaOutline()
+    private let controls = RecordingControls()
     let thumbnail = CaptureThumbnail()
     let pins = PinBoard()
     let scroller = ScrollSession()
@@ -196,6 +197,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         timer?.invalidate()
         timer = nil
         outline.hide()
+        controls.hide()
         guard let statusItem else { return }
         statusItem.button?.image = NSImage(
             systemSymbolName: Config.StatusItem.symbolName, accessibilityDescription: "Frameless")
@@ -228,6 +230,9 @@ extension AppDelegate {
                 try await recorder.start(selection, options: preferences.recordingOptions, to: url)
                 recordingScreen = NSScreen.screens.first { $0.displayID == selection.displayID }
                 outline.show(selection)
+                controls.show(
+                    for: selection, onStop: { [weak self] in self?.stopRecording() },
+                    onDiscard: { [weak self] in self?.discardRecording() })
                 showRecording(since: .now)
                 playSound(.recordingStarted)
             } catch let error as SCStreamError where error.code == .userDeclined {
@@ -254,6 +259,7 @@ extension AppDelegate {
         guard case .recording = state else { return }
         state = .busy
         outline.hide()
+        controls.hide()
         Task {
             do {
                 let url = try await recorder.stop()

@@ -1,5 +1,4 @@
 import AppKit
-import Carbon.HIToolbox
 
 /// Scroll mode: the area stays outlined over the live screen, letting scrolls through to the app beneath, while each
 /// frame is stitched into one tall image, previewed beside it; a small bar finishes or cancels.
@@ -7,7 +6,7 @@ import Carbon.HIToolbox
 final class ScrollSession {
     private let outline = AreaOutline()
     private let preview = ScrollPreview()
-    private var panel: ScrollBarPanel?
+    private var panel: BarPanel?
     private var capture: ScrollCapture?
     private var continuation: CheckedContinuation<Bool, Never>?
 
@@ -57,7 +56,7 @@ final class ScrollSession {
         let origin = ScreenGeometry.barOrigin(
             for: bar.frame.size, under: area, in: screen, gap: Config.Bar.selectionGap,
             inset: Config.Style.barBottomOffset, centred: true)
-        let panel = ScrollBarPanel(frame: CGRect(origin: origin, size: bar.frame.size))
+        let panel = BarPanel(frame: CGRect(origin: origin, size: bar.frame.size))
         panel.contentView = bar
         panel.onKey = { [weak self] isDone in self?.finish(isDone) }
         panel.orderFrontRegardless()
@@ -76,33 +75,5 @@ final class ScrollSession {
         preview.hide()
         panel?.orderOut(nil)
         panel = nil
-    }
-}
-
-/// The floating bar's window: takes Return and Esc without taking focus from the app being scrolled.
-private final class ScrollBarPanel: NSPanel {
-    var onKey: (@MainActor (Bool) -> Void)?
-
-    init(frame: CGRect) {
-        super.init(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        level = .statusBar
-        isOpaque = false
-        backgroundColor = .clear
-        hasShadow = false
-        hidesOnDeactivate = false
-        sharingType = .none
-        isReleasedWhenClosed = false
-        animationBehavior = .none
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-    }
-
-    override var canBecomeKey: Bool { true }
-
-    override func keyDown(with event: NSEvent) {
-        switch Int(event.keyCode) {
-        case kVK_Return, kVK_ANSI_KeypadEnter: onKey?(true)
-        case kVK_Escape: onKey?(false)
-        default: super.keyDown(with: event)
-        }
     }
 }
