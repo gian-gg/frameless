@@ -272,12 +272,13 @@ extension AppDelegate {
         }
     }
 
-    /// A recording macOS ended by itself is saved like Stop and Save; only a lost file is reported.
+    /// A recording macOS ended by itself is saved like Stop and Save, then reported unless the user stopped it.
     private func recordingEndedEarly(_ end: Recorder.EarlyEnd) {
         showIdle()
         switch end {
-        case .saved(let url):
+        case .saved(let url, let reason):
             recordingSaved(url)
+            if let reason { showRecordingStopped(reason, savedAt: url) }
         case .failed(let error):
             showError("Recording ended and couldn't be saved", error)
         }

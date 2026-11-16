@@ -23,9 +23,9 @@ final class Recorder: NSObject {
         case stopping
     }
 
-    /// How a recording that macOS stopped on its own turned out.
+    /// How a recording that macOS stopped on its own turned out; `reason` is nil when the user stopped it.
     enum EarlyEnd {
-        case saved(URL)
+        case saved(URL, reason: Error?)
         case failed(Error)
     }
 
@@ -94,17 +94,23 @@ final class Recorder: NSObject {
             timeout: .seconds(Config.Recording.finishTimeout), timeoutError: RecorderError.unfinished)
     }
 
+    /// Why the stream stopped, or nil when the user stopped it from the macOS recording indicator.
+    static func stopReason(for error: Error) -> Error? {
+        (error as? SCStreamError)?.code == .userStopped ? nil : error
+    }
+
     /// The stream ended without being asked to: keep the file if it can still be finished.
-    private func streamStopped() {
+    private func streamStopped(_ error: Error) {
         guard case .recording(_, let url) = state else { return }
         state = .stopping
+        let reason = Self.stopReason(for: error)
         Task {
             defer { state = .idle }
             do {
                 try await waitForFinish()
-                onEndedEarly?(.saved(url))
+                onEndedEarly?(.saved(url, reason: reason))
             } catch {
-                onEndedEarly?(await keepIfPlayable(url, failedWith: error))
+                onEndedEarly?(await keepIfPlayable(url, reason: reason, failedWith: error))
             }
         }
     }
@@ -119,13 +125,13 @@ final class Recorder: NSObject {
         Task {
             defer { state = .idle }
             try? await stream.stopCapture()
-            onEndedEarly?(await keepIfPlayable(url, failedWith: error))
+            onEndedEarly?(await keepIfPlayable(url, reason: error, failedWith: error))
         }
     }
 
     /// Keeps a recording that failed to finish if what was written still plays, otherwise deletes it.
-    private func keepIfPlayable(_ url: URL, failedWith error: Error) async -> EarlyEnd {
-        if await RecordingFile.isPlayable(url) { return .saved(url) }
+    private func keepIfPlayable(_ url: URL, reason: Error?, failedWith error: Error) async -> EarlyEnd {
+        if await RecordingFile.isPlayable(url) { return .saved(url, reason: reason) }
         try? FileManager.default.removeItem(at: url)
         return .failed(error)
     }
@@ -133,7 +139,7 @@ final class Recorder: NSObject {
 
 extension Recorder: SCStreamDelegate, SCRecordingOutputDelegate {
     nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
-        Task { @MainActor in self.streamStopped() }
+        Task { @MainActor in self.streamStopped(error) }
     }
 
     nonisolated func recordingOutputDidFinishRecording(_ recordingOutput: SCRecordingOutput) {

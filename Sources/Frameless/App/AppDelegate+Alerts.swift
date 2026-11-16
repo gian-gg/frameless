@@ -49,6 +49,20 @@ extension AppDelegate {
         }
     }
 
+    /// Reports a recording that stopped unexpectedly and offers to show what was saved.
+    func showRecordingStopped(_ reason: Error, savedAt url: URL) {
+        let alert = NSAlert()
+        alert.messageText = "Recording stopped unexpectedly"
+        alert.informativeText =
+            reason.localizedDescription + "\n\nWhat was recorded until then was saved and copied to the clipboard."
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Show in Finder")
+        NSApp.activate()
+        if alert.runModal() == .alertSecondButtonReturn {
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        }
+    }
+
     /// Asks before throwing away the recording in progress.
     func confirmDiscardRecording() -> Bool {
         let alert = NSAlert()
