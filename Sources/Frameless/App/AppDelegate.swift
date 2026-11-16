@@ -245,6 +245,7 @@ extension AppDelegate {
     }
 
     @objc private func discardRecording() {
+        guard confirmDiscardRecording() else { return }
         finishRecording(saving: false)
     }
 

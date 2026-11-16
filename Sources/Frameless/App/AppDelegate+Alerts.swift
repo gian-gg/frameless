@@ -48,4 +48,17 @@ extension AppDelegate {
             NSWorkspace.shared.open(url)
         }
     }
+
+    /// Asks before throwing away the recording in progress.
+    func confirmDiscardRecording() -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "Discard this recording?"
+        alert.informativeText = "The recording will stop and won't be saved."
+        alert.alertStyle = .warning
+        let discard = alert.addButton(withTitle: "Discard")
+        discard.hasDestructiveAction = true
+        alert.addButton(withTitle: "Keep Recording")
+        NSApp.activate()
+        return alert.runModal() == .alertFirstButtonReturn
+    }
 }
