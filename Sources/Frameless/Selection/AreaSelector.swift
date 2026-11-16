@@ -24,7 +24,6 @@ struct CaptureSelection: Equatable {
 final class AreaSelector {
     private var windows: [OverlayWindow] = []
     private var windowList = WindowList(windows: [])
-    private var mode = OverlayView.Mode.screen
     private var continuation: CheckedContinuation<CaptureSelection?, Never>?
 
     /// Shows the overlay on every display, over the frozen screens when given; nil when cancelled.
@@ -40,7 +39,6 @@ final class AreaSelector {
 
     private func showOverlays(for purpose: CapturePurpose, windowList: WindowList, frozen: FrozenScreens?) {
         self.windowList = windowList
-        mode = .screen
         windows = NSScreen.screens.compactMap { screen in
             guard let displayID = screen.displayID else { return nil }
             let frame = screen.frame
@@ -49,7 +47,6 @@ final class AreaSelector {
                 self?.finish(CaptureSelection(displayID: displayID, screenFrame: frame, target: target))
             }
             window.overlay.onCancel = { [weak self] in self?.finish(nil) }
-            window.overlay.onToggleMode = { [weak self] in self?.toggleMode() }
             window.overlay.onMouseMoved = { [weak self] in self?.updateHighlightedWindow() }
             if let frozen {
                 Task { [weak window] in
@@ -63,19 +60,14 @@ final class AreaSelector {
         let mouse = NSEvent.mouseLocation
         let hovered = windows.first { $0.frame.contains(mouse) } ?? windows[0]
         hovered.overlay.isHovered = true
+        updateHighlightedWindow()
         for window in windows { window.fadeIn() }
         hovered.makeKey()
     }
 
-    private func toggleMode() {
-        mode = mode == .screen ? .window : .screen
-        for window in windows { window.overlay.mode = mode }
-        updateHighlightedWindow()
-    }
-
     /// Highlights the window under the cursor on every screen it spans.
     private func updateHighlightedWindow() {
-        let highlighted = mode == .window ? windowList.window(at: NSEvent.mouseLocation) : nil
+        let highlighted = windowList.window(at: NSEvent.mouseLocation)
         for window in windows where window.overlay.highlightedWindow != highlighted {
             window.overlay.highlightedWindow = highlighted
         }

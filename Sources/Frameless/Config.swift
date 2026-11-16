@@ -185,15 +185,11 @@ enum Config {
 
     /// Display and area picker.
     enum Overlay {
-        static func displayTitle(_ verb: String) -> String { "Click to \(verb) this display" }
+        static func displayTitle(_ verb: String) -> String { "\(verb.capitalized) this display" }
         static let cancelHint = "Cancel"
-        static let windowHint = "Window"
         static let displayButton = "Display"
-        static let screenHint = "Display or area"
-        static let windowIcon = LucideIcon.appWindow
         static let windowLabelLength = 48
         static let displayIcon = LucideIcon.monitor
-        static let dragIcon = LucideIcon.squareDashed
         static let idleDimOpacity: CGFloat = 0.5
         static let minimumDrag: CGFloat = 4
         static let minimumWindowSize: CGFloat = 40

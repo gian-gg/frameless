@@ -23,8 +23,6 @@ enum LucideIcon: CaseIterable {
     case circleDot
     case close
     case monitor
-    case appWindow
-    case squareDashed
     case eraser
     case keyboard
     case triangleAlert
@@ -103,16 +101,6 @@ enum LucideIcon: CaseIterable {
         .monitor: [
             #"<rect width="20" height="14" x="2" y="3" rx="2"/>"#, #"<line x1="8" x2="16" y1="21" y2="21"/>"#,
             #"<line x1="12" x2="12" y1="17" y2="21"/>"#,
-        ],
-        .appWindow: [
-            #"<rect x="2" y="4" width="20" height="16" rx="2"/>"#, #"<path d="M10 4v4"/>"#,
-            #"<path d="M2 8h20"/>"#, #"<path d="M6 4v4"/>"#,
-        ],
-        .squareDashed: [
-            #"<path d="M5 3a2 2 0 0 0-2 2"/>"#, #"<path d="M19 3a2 2 0 0 1 2 2"/>"#,
-            #"<path d="M21 19a2 2 0 0 1-2 2"/>"#, #"<path d="M5 21a2 2 0 0 1-2-2"/>"#, #"<path d="M9 3h1"/>"#,
-            #"<path d="M9 21h1"/>"#, #"<path d="M14 3h1"/>"#, #"<path d="M14 21h1"/>"#, #"<path d="M3 9v1"/>"#,
-            #"<path d="M21 9v1"/>"#, #"<path d="M3 14v1"/>"#, #"<path d="M21 14v1"/>"#,
         ],
         .eraser: [
             #"<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/>"#,

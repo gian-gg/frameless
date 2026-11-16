@@ -26,29 +26,14 @@ final class OverlayWindow: ScreenCoverWindow {
     }
 }
 
-/// Dims the screen and reports a display click, a dragged area, or a picked window.
+/// Dims the screen and reports a clicked window, a dragged area, or the display.
 final class OverlayView: NSView {
-    enum Mode {
-        /// Click a display or drag an area.
-        case screen
-        /// Click the highlighted window.
-        case window
-    }
-
     var onFinish: (@MainActor (CaptureSelection.Target) -> Void)?
     var onCancel: (@MainActor () -> Void)?
-    var onToggleMode: (@MainActor () -> Void)?
     var onMouseMoved: (@MainActor () -> Void)?
 
     var isHovered = false {
         didSet { refresh() }
-    }
-    var mode = Mode.screen {
-        didSet {
-            anchor = nil
-            current = nil
-            refresh()
-        }
     }
     var highlightedWindow: WindowInfo? {
         didSet { refresh() }
@@ -58,7 +43,6 @@ final class OverlayView: NSView {
     private let screenOrigin: CGPoint
     private let purpose: CapturePurpose
     private var bar: GlassBar?
-    private var barMode: Mode?
     private let sizeTag = GlassTag()
     private var sizeTagTarget: CGRect?
     private var anchor: CGPoint?
@@ -111,30 +95,26 @@ final class OverlayView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
-        guard mode == .screen else { return }
         anchor = convert(event.locationInWindow, from: nil)
         current = anchor
         refresh()
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard mode == .screen else { return }
         current = convert(event.locationInWindow, from: nil)
         refresh()
     }
 
     override func mouseUp(with event: NSEvent) {
-        guard mode == .screen else {
-            if let highlightedWindow { onFinish?(.window(highlightedWindow.id)) }
-            return
-        }
         current = convert(event.locationInWindow, from: nil)
-        let minimum = Config.Overlay.minimumDrag
-        guard let rect = selection, rect.width >= minimum, rect.height >= minimum else {
-            onFinish?(.display)
-            return
-        }
-        onFinish?(.area(rect))
+        onFinish?(Self.target(area: draggedArea, window: highlightedWindow))
+    }
+
+    /// What a mouse release picks: a dragged area, else the highlighted window, else the display.
+    static func target(area: CGRect?, window: WindowInfo?) -> CaptureSelection.Target {
+        if let area { return .area(area) }
+        if let window { return .window(window.id) }
+        return .display
     }
 
     override func keyDown(with event: NSEvent) {
@@ -142,20 +122,17 @@ final class OverlayView: NSView {
         case kVK_Escape:
             onCancel?()
         case kVK_Return, kVK_ANSI_KeypadEnter:
-            confirm()
-        case kVK_Space where !event.isARepeat:
-            onToggleMode?()
+            onFinish?(.display)
         default:
             super.keyDown(with: event)
         }
     }
 
-    /// Return: the hovered display, or the highlighted window in window mode.
-    private func confirm() {
-        switch mode {
-        case .screen: onFinish?(.display)
-        case .window: if let highlightedWindow { onFinish?(.window(highlightedWindow.id)) }
-        }
+    /// The dragged rect once it's big enough to count as an area rather than a click.
+    private var draggedArea: CGRect? {
+        let minimum = Config.Overlay.minimumDrag
+        guard let rect = selection, rect.width >= minimum, rect.height >= minimum else { return nil }
+        return rect
     }
 
     private var selection: CGRect? {
@@ -174,50 +151,32 @@ final class OverlayView: NSView {
         needsDisplay = true
         needsLayout = true
         updateTag()
-        let showsBar = isHovered && selection == nil
-        if showsBar, barMode != mode { rebuildBar() }
+        let showsBar = isHovered && draggedArea == nil
+        if showsBar, bar == nil { buildBar() }
         bar?.isHidden = !showsBar
     }
 
-    /// Rebuilds the bottom bar for the current mode: buttons naming their keys in tooltips, and Cancel.
-    private func rebuildBar() {
-        bar?.removeFromSuperview()
+    /// Builds the bottom bar: the display button naming its key in its tooltip, and Cancel.
+    private func buildBar() {
         let size = ScreenGeometry.evenPixelSize(bounds.size, scale: scale)
         let display = GlassBar.Item(
             icon: Config.Overlay.displayIcon, title: Config.Overlay.displayButton, shortcut: nil,
             toolTip: "\(Config.Overlay.displayTitle(purpose.verb)), \(size.width) × \(size.height) (↩)",
             perform: { [weak self] in self?.onFinish?(.display) })
-        let items: [GlassBar.Item] =
-            switch mode {
-            case .screen:
-                [
-                    display,
-                    .init(
-                        icon: Config.Overlay.windowIcon, title: Config.Overlay.windowHint, shortcut: nil,
-                        toolTip: "Pick a window (Space)", perform: { [weak self] in self?.onToggleMode?() }),
-                ]
-            case .window:
-                [
-                    .init(
-                        icon: Config.Overlay.dragIcon, title: Config.Overlay.screenHint, shortcut: nil,
-                        toolTip: "Back to display or area (Space)", perform: { [weak self] in self?.onToggleMode?() })
-                ]
-            }
         let bar = GlassBar(
-            items: items, closeToolTip: "\(Config.Overlay.cancelHint) (Esc)",
+            items: [display], closeToolTip: "\(Config.Overlay.cancelHint) (Esc)",
             close: { [weak self] in self?.onCancel?() })
         addSubview(bar)
         self.bar = bar
-        barMode = mode
     }
 
     /// Shows the pixel size for a drag, or the name and size of the highlighted window.
     private func updateTag() {
-        if mode == .screen, let rect = selection {
+        if let rect = draggedArea {
             let size = ScreenGeometry.evenPixelSize(rect.size, scale: scale)
             sizeTag.show("\(size.width) × \(size.height)")
             sizeTagTarget = rect
-        } else if mode == .window, let window = highlightedWindow, let local = visibleFrame(of: window) {
+        } else if let window = highlightedWindow, let local = visibleFrame(of: window) {
             let size = ScreenGeometry.evenPixelSize(window.frame.size, scale: scale)
             sizeTag.show("\(window.displayName)   \(size.width) × \(size.height)")
             sizeTagTarget = local
@@ -248,38 +207,13 @@ final class OverlayView: NSView {
 
     // MARK: - Drawing
 
+    /// Reveals the dragged area, else the highlighted window, over the dim.
     override func draw(_ dirtyRect: NSRect) {
-        switch mode {
-        case .window:
-            drawWindowMode()
-        case .screen:
-            if let rect = selection {
-                drawSelection(rect)
-            } else if isHovered {
-                drawHoveredDisplay()
-            } else {
-                NSColor.black.withAlphaComponent(Config.Overlay.idleDimOpacity).setFill()
-                bounds.fill()
-            }
-        }
-    }
-
-    private func drawHoveredDisplay() {
-        NSColor.black.withAlphaComponent(Config.Style.dimOpacity).setFill()
+        let revealed = draggedArea ?? highlightedWindow.flatMap(visibleFrame(of:))
+        let opacity = revealed != nil || isHovered ? Config.Style.dimOpacity : Config.Overlay.idleDimOpacity
+        NSColor.black.withAlphaComponent(opacity).setFill()
         bounds.fill()
-    }
-
-    private func drawSelection(_ rect: CGRect) {
-        NSColor.black.withAlphaComponent(Config.Style.dimOpacity).setFill()
-        bounds.fill()
-        reveal(rect)
-    }
-
-    private func drawWindowMode() {
-        NSColor.black.withAlphaComponent(Config.Style.dimOpacity).setFill()
-        bounds.fill()
-        guard let highlightedWindow, let local = visibleFrame(of: highlightedWindow) else { return }
-        reveal(local)
+        if let revealed { reveal(revealed) }
     }
 
     /// Clears the dim over a rect and frames it with the soft line and round handles.
