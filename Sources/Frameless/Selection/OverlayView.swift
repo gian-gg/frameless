@@ -156,12 +156,12 @@ final class OverlayView: NSView {
         bar?.isHidden = !showsBar
     }
 
-    /// Builds the bottom bar: the display button naming its key in its tooltip, and Cancel.
+    /// Builds the bottom bar: the display button with its key cap, and Cancel.
     private func buildBar() {
         let size = ScreenGeometry.evenPixelSize(bounds.size, scale: scale)
         let display = GlassBar.Item(
-            icon: Config.Overlay.displayIcon, title: Config.Overlay.displayButton, shortcut: nil,
-            toolTip: "\(Config.Overlay.displayTitle(purpose.verb)), \(size.width) × \(size.height) (↩)",
+            icon: Config.Overlay.displayIcon, title: Config.Overlay.displayButton, shortcut: .text("↩"),
+            toolTip: "\(Config.Overlay.displayTitle(purpose.verb)), \(size.width) × \(size.height)",
             perform: { [weak self] in self?.onFinish?(.display) })
         let bar = GlassBar(
             items: [display], closeToolTip: "\(Config.Overlay.cancelHint) (Esc)",

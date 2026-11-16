@@ -144,8 +144,14 @@ final class BarButton: NSControl {
         case .text(let string):
             let text = NSAttributedString(
                 string: string, attributes: [.font: Self.keyFont, .foregroundColor: NSColor.secondaryLabelColor])
-            let size = text.size()
-            return (size, { text.draw(at: CGPoint(x: $0.midX - size.width / 2, y: $0.midY - size.height / 2)) })
+            let ink = text.boundingRect(with: .zero, options: .usesDeviceMetrics)
+            return (
+                text.size(),
+                { key in
+                    let baseline = CGPoint(x: key.midX - ink.midX, y: key.midY - ink.midY)
+                    text.draw(with: CGRect(origin: baseline, size: .zero), options: [])
+                }
+            )
         case nil:
             return nil
         }
